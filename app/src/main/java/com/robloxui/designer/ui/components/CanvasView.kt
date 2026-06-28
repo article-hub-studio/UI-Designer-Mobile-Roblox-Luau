@@ -298,8 +298,8 @@ private fun getBoxStyle(element: GuiElement): Modifier {
  * Draw the Roblox Studio-style grid on the canvas background.
  */
 private fun DrawScope.drawCanvasGrid(canvasSize: Size, zoom: Float) {
-    val gridMinorPx = 20.dp.toPx() * zoom
-    val gridMajorPx = 100.dp.toPx() * zoom
+    val gridMinorPx = 14.dp.toPx() * zoom
+    val gridMajorPx = 70.dp.toPx() * zoom
 
     if (gridMinorPx < 4f) return // too zoomed out to show minor grid
 

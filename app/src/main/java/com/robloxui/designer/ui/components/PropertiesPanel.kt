@@ -21,10 +21,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.robloxui.designer.model.*
 import com.robloxui.designer.ui.theme.StudioColors
 import com.robloxui.designer.ui.theme.StudioTypography
 
+/**
+ * Compact Figma-style properties panel.
+ */
 @Composable
 fun PropertiesPanel(
     element: GuiElement?,
@@ -33,53 +37,34 @@ fun PropertiesPanel(
 ) {
     Column(modifier = modifier.background(StudioColors.PropBg)) {
         // Header
-        PropertiesHeader(element)
+        Row(
+            modifier = Modifier.fillMaxWidth().height(24.dp).background(StudioColors.BackgroundDarker).padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                if (element != null) "PROPERTIES - ${element.name}" else "PROPERTIES",
+                style = StudioTypography.MonoSmall,
+                color = StudioColors.TextTertiary,
+                fontSize = 9.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
 
         Divider(color = StudioColors.ToolbarDivider, thickness = 1.dp)
 
         if (element == null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Filled.TouchApp,
-                        contentDescription = null,
-                        tint = StudioColors.TextTertiary,
-                        modifier = Modifier.size(36.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Select an element\nto edit its properties",
-                        style = StudioTypography.MonoText,
-                        color = StudioColors.TextDisabled
-                    )
-                }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "Select an element",
+                    style = StudioTypography.MonoSmall,
+                    color = StudioColors.TextDisabled,
+                    fontSize = 10.sp
+                )
             }
         } else {
-            val groupedProperties = element.properties.values.groupBy { it.category }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                groupedProperties.forEach { (category, props) ->
-                    item {
-                        PropertyCategory(category.displayName)
-                    }
-                    items(props) { property ->
-                        PropertyRow(
-                            property = property,
-                            onValueChange = { newValue ->
-                                onPropertyChange(element.id, property.name, newValue)
-                            }
-                        )
-                    }
-                }
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
+            PropertiesContent(element = element, onPropertyChange = onPropertyChange)
         }
     }
 }
@@ -87,34 +72,27 @@ fun PropertiesPanel(
 @Composable
 private fun PropertiesHeader(element: GuiElement?) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(StudioColors.BackgroundDarker)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().background(StudioColors.PropCategoryBg).padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = Icons.Filled.Tune,
-            contentDescription = "Properties",
-            tint = StudioColors.Primary,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            "Properties",
-            style = StudioTypography.MonoLabel,
-            color = StudioColors.TextSecondary
-        )
         if (element != null) {
-            Spacer(modifier = Modifier.weight(1f))
-            ElementTypeIcon(type = element.type, size = 14)
-            Spacer(modifier = Modifier.width(4.dp))
+            val iconData = getElementIcon(element.type)
+            Icon(iconData.icon, null, tint = iconData.color, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 element.name,
+                style = StudioTypography.MonoText,
+                color = StudioColors.TextPrimary,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                element.type.displayName,
                 style = StudioTypography.MonoSmall,
                 color = StudioColors.TextTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                fontSize = 9.sp
             )
         }
     }
@@ -123,76 +101,68 @@ private fun PropertiesHeader(element: GuiElement?) {
 @Composable
 private fun PropertyCategory(name: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(StudioColors.PropCategoryBg)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().background(StudioColors.PropCategoryBg).padding(horizontal = 8.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = name.uppercase(),
+            name,
             style = StudioTypography.MonoLabel,
-            color = StudioColors.Primary,
-            fontSize = MaterialTheme.typography.labelSmall.fontSize
+            color = StudioColors.TextTertiary,
+            fontSize = 9.sp,
+            letterSpacing = 0.5.sp
         )
     }
 }
 
 @Composable
 private fun PropertyRow(
-    property: Property,
-    onValueChange: (PropValue) -> Unit
+    label: String,
+    content: @Composable RowScope.() -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(24.dp)
             .background(StudioColors.PropRowBg)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Property name
         Text(
-            text = property.displayName,
+            label,
             style = StudioTypography.MonoSmall,
             color = StudioColors.PropLabelText,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(100.dp)
+            fontSize = 9.sp,
+            modifier = Modifier.width(64.dp)
         )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        // Property value editor
-        Box(modifier = Modifier.weight(1f)) {
-            PropertyValueEditor(
-                value = property.value,
-                onValueChange = onValueChange
-            )
-        }
+        Spacer(modifier = Modifier.width(4.dp))
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            content = content
+        )
     }
 }
 
 @Composable
 private fun PropertyValueEditor(
-    value: PropValue,
+    prop: Property,
     onValueChange: (PropValue) -> Unit
 ) {
+    val value = prop.value
     when (value) {
         is PropValue.StringValue -> {
             var text by remember(value) { mutableStateOf(value.value) }
             OutlinedTextField(
                 value = text,
-                onValueChange = {
-                    text = it
-                    onValueChange(PropValue.StringValue(it))
-                },
+                onValueChange = { text = it },
                 singleLine = true,
-                textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(30.dp),
+                textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText, fontSize = 9.sp),
+                modifier = Modifier.fillMaxWidth().height(22.dp),
                 colors = TextFieldColors(),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { onValueChange(PropValue.StringValue(text)) }
+                )
             )
         }
         is PropValue.FloatValue -> {
@@ -201,15 +171,10 @@ private fun PropertyValueEditor(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(30.dp),
+                textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText, fontSize = 9.sp),
+                modifier = Modifier.fillMaxWidth().height(22.dp),
                 colors = TextFieldColors(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Done
-                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = {
                         val parsed = text.toFloatOrNull()
@@ -224,15 +189,10 @@ private fun PropertyValueEditor(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(30.dp),
+                textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText, fontSize = 9.sp),
+                modifier = Modifier.fillMaxWidth().height(22.dp),
                 colors = TextFieldColors(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done
-                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = {
                         val parsed = text.toIntOrNull()
@@ -252,75 +212,59 @@ private fun PropertyValueEditor(
                         uncheckedThumbColor = StudioColors.TextTertiary,
                         uncheckedTrackColor = StudioColors.SurfaceHighlight
                     ),
-                    modifier = Modifier.scale(0.8f)
+                    modifier = Modifier.scale(0.7f)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     if (value.value) "True" else "False",
                     style = StudioTypography.MonoSmall,
-                    color = if (value.value) StudioColors.Primary else StudioColors.TextTertiary
+                    color = if (value.value) StudioColors.Primary else StudioColors.TextTertiary,
+                    fontSize = 9.sp
                 )
             }
         }
         is PropValue.ColorValue -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Color swatch
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .size(16.dp)
+                        .clip(RoundedCornerShape(3.dp))
                         .background(value.value)
-                        .border(1.dp, StudioColors.PropInputBorder, RoundedCornerShape(4.dp))
+                        .border(1.dp, StudioColors.PropInputBorder, RoundedCornerShape(3.dp))
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     "#%06X".format(0xFFFFFF and value.value.toArgb()),
                     style = StudioTypography.MonoSmall,
-                    color = StudioColors.PropValueText
+                    color = StudioColors.PropValueText,
+                    fontSize = 9.sp
                 )
             }
         }
         is PropValue.EnumValue -> {
             var expanded by remember { mutableStateOf(false) }
             Box {
-                OutlinedButton(
-                    onClick = { expanded = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(30.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = StudioColors.PropValueText
-                    ),
-                    border = BorderStroke(1.dp, StudioColors.PropInputBorder),
-                    shape = RoundedCornerShape(4.dp)
-                ) {
-                    Text(
-                        value.value,
-                        style = StudioTypography.MonoSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Icon(
-                        Icons.Filled.ArrowDropDown,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier.background(StudioColors.Surface)
-                ) {
+                OutlinedTextField(
+                    value = value.value,
+                    onValueChange = {},
+                    readOnly = true,
+                    singleLine = true,
+                    textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText, fontSize = 9.sp),
+                    modifier = Modifier.fillMaxWidth().height(22.dp).clickable { expanded = true },
+                    colors = TextFieldColors(),
+                    trailingIcon = {
+                        Icon(Icons.Filled.ArrowDropDown, null, tint = StudioColors.TextTertiary, modifier = Modifier.size(14.dp))
+                    }
+                )
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     value.options.forEach { option ->
                         DropdownMenuItem(
                             text = {
                                 Text(
                                     option,
                                     style = StudioTypography.MonoText,
-                                    color = if (option == value.value) StudioColors.Primary
-                                    else StudioColors.TextPrimary
+                                    color = if (option == value.value) StudioColors.Primary else StudioColors.TextPrimary,
+                                    fontSize = 10.sp
                                 )
                             },
                             onClick = {
@@ -333,52 +277,57 @@ private fun PropertyValueEditor(
             }
         }
         is PropValue.Vector2Value -> {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Vector2Field(
-                    label = "X",
-                    value = value.x,
-                    onValueChange = { onValueChange(PropValue.Vector2Value(it, value.y)) }
-                )
-                Vector2Field(
-                    label = "Y",
-                    value = value.y,
-                    onValueChange = { onValueChange(PropValue.Vector2Value(value.x, it)) }
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                Vector2Field(label = "X", value = value.x, onValueChange = { onValueChange(PropValue.Vector2Value(it, value.y)) })
+                Vector2Field(label = "Y", value = value.y, onValueChange = { onValueChange(PropValue.Vector2Value(value.x, it)) })
             }
         }
         is PropValue.UDim2Value -> {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    UDimField(
-                        label = "X.Sc",
-                        value = value.xScale,
-                        onValueChange = { onValueChange(value.copy(xScale = it)) }
-                    )
-                    UDimField(
-                        label = "X.Os",
-                        value = value.xOffset,
-                        onValueChange = { onValueChange(value.copy(xOffset = it)) }
-                    )
+                    UDimField(label = "X.Sc", value = value.xScale, onValueChange = { onValueChange(value.copy(xScale = it)) })
+                    UDimField(label = "X.Os", value = value.xOffset, onValueChange = { onValueChange(value.copy(xOffset = it)) })
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    UDimField(
-                        label = "Y.Sc",
-                        value = value.yScale,
-                        onValueChange = { onValueChange(value.copy(yScale = it)) }
-                    )
-                    UDimField(
-                        label = "Y.Os",
-                        value = value.yOffset,
-                        onValueChange = { onValueChange(value.copy(yOffset = it)) }
+                    UDimField(label = "Y.Sc", value = value.yScale, onValueChange = { onValueChange(value.copy(yScale = it)) })
+                    UDimField(label = "Y.Os", value = value.yOffset, onValueChange = { onValueChange(value.copy(yOffset = it)) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PropertiesContent(
+    element: GuiElement,
+    onPropertyChange: (String, String, PropValue) -> Unit
+) {
+    val props = element.properties.values.toList()
+    val categories = props.groupBy { it.category }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 2.dp)
+    ) {
+        categories.forEach { (category, categoryProps) ->
+            item(key = "cat_$category") {
+                PropertyCategory(name = category)
+            }
+            items(categoryProps, key = { "${element.id}_${it.key}" }) { prop ->
+                PropertyRow(label = prop.displayName) {
+                    PropertyValueEditor(
+                        prop = prop,
+                        onValueChange = { newValue ->
+                            onPropertyChange(element.id, prop.key, newValue)
+                        }
                     )
                 }
             }
         }
     }
 }
+
+// --- Compact field editors ---
 
 @Composable
 private fun Vector2Field(
@@ -395,21 +344,17 @@ private fun Vector2Field(
             label,
             style = StudioTypography.MonoSmall,
             color = StudioColors.TextTertiary,
-            modifier = Modifier.width(18.dp)
+            fontSize = 8.sp,
+            modifier = Modifier.width(14.dp)
         )
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
             singleLine = true,
-            textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText),
-            modifier = Modifier
-                .weight(1f)
-                .height(28.dp),
+            textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText, fontSize = 9.sp),
+            modifier = Modifier.weight(1f).height(20.dp),
             colors = TextFieldColors(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Decimal,
-                imeAction = ImeAction.Done
-            ),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
                 onDone = {
                     val parsed = text.toFloatOrNull()
@@ -435,21 +380,17 @@ private fun UDimField(
             label,
             style = StudioTypography.MonoSmall,
             color = StudioColors.TextTertiary,
-            modifier = Modifier.width(28.dp)
+            fontSize = 8.sp,
+            modifier = Modifier.width(22.dp)
         )
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
             singleLine = true,
-            textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText),
-            modifier = Modifier
-                .weight(1f)
-                .height(28.dp),
+            textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText, fontSize = 9.sp),
+            modifier = Modifier.weight(1f).height(20.dp),
             colors = TextFieldColors(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Decimal,
-                imeAction = ImeAction.Done
-            ),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
                 onDone = {
                     val parsed = text.toFloatOrNull()

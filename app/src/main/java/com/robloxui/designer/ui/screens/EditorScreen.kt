@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.robloxui.designer.model.ElementType
 import com.robloxui.designer.model.GuiElement
 import com.robloxui.designer.ui.components.*
@@ -24,81 +25,49 @@ import com.robloxui.designer.viewmodel.EditorPanel
 import com.robloxui.designer.viewmodel.EditorViewModel
 
 /**
- * Main editor screen with the 3-panel Roblox Studio-inspired layout
- * optimized for mobile.
+ * Figma-inspired landscape editor with compact panels.
+ * Layout: Toolbar | Canvas | Right Panel (Explorer/Properties/Toolbox)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditorScreen(
-    viewModel: EditorViewModel
-) {
+fun EditorScreen(viewModel: EditorViewModel) {
     val state = viewModel.state
 
-    // Export dialog
     if (state.showExportDialog) {
         ExportDialog(
             rootElement = state.rootElement,
             onDismiss = { viewModel.setShowExportDialog(false) },
-            onCopyCode = { /* clipboard already handled */ }
+            onCopyCode = {}
         )
     }
 
-    Scaffold(
-        topBar = {
-            EditorTopBar(
-                projectName = state.rootElement.name,
-                onUndo = { viewModel.undo() },
-                onRedo = { viewModel.redo() },
-                canUndo = state.undoStack.isNotEmpty(),
-                canRedo = state.redoStack.isNotEmpty(),
-                onExport = { viewModel.setShowExportDialog(true) },
-                onPreview = { viewModel.togglePreview() },
-                isPreviewing = state.previewMode,
-                onNewProject = { viewModel.newProject() }
-            )
-        },
-        bottomBar = {
-            MobileBottomNav(
-                activePanel = state.activePanel,
-                onPanelChange = { viewModel.setActivePanel(it) },
-                selectedElement = viewModel.selectedElement,
-                onDelete = {
-                    state.selectedElementId?.let { viewModel.deleteElement(it) }
-                },
-                onCopy = {
-                    state.selectedElementId?.let { viewModel.copyElement(it) }
-                },
-                onPaste = {
-                    viewModel.pasteElement()
-                },
-                hasClipboard = state.clipboard != null,
-                hasSelection = state.selectedElementId != null
-            )
-        },
-        containerColor = StudioColors.Background
-    ) { paddingValues ->
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Left sidebar: Toolbar (element palette)
+    Column(modifier = Modifier.fillMaxSize().background(StudioColors.Background)) {
+        // Top bar - compact Figma style
+        EditorTopBar(
+            projectName = state.rootElement.name,
+            onUndo = { viewModel.undo() },
+            onRedo = { viewModel.redo() },
+            canUndo = state.undoStack.isNotEmpty(),
+            canRedo = state.redoStack.isNotEmpty(),
+            onExport = { viewModel.setShowExportDialog(true) },
+            onPreview = { viewModel.togglePreview() },
+            isPreviewing = state.previewMode,
+            onNewProject = { viewModel.newProject() }
+        )
+
+        // Main area: Toolbar | Canvas | Right Panel
+        Row(modifier = Modifier.fillMaxSize()) {
+            // Left toolbar (compact)
             EditorToolbar(
                 currentTool = state.tool,
                 canUndo = state.undoStack.isNotEmpty(),
                 canRedo = state.redoStack.isNotEmpty(),
                 onToolChange = { viewModel.setTool(it) },
-                onAddElement = { type ->
-                    viewModel.addElement(type)
-                },
+                onAddElement = { viewModel.addElement(it) },
                 onUndo = { viewModel.undo() },
                 onRedo = { viewModel.redo() },
-                onDelete = {
-                    state.selectedElementId?.let { viewModel.deleteElement(it) }
-                },
-                onCopy = {
-                    state.selectedElementId?.let { viewModel.copyElement(it) }
-                },
+                onDelete = { state.selectedElementId?.let { viewModel.deleteElement(it) } },
+                onCopy = { state.selectedElementId?.let { viewModel.copyElement(it) } },
                 onPaste = { viewModel.pasteElement() },
                 onExport = { viewModel.setShowExportDialog(true) },
                 onPreview = { viewModel.togglePreview() },
@@ -106,12 +75,11 @@ fun EditorScreen(
                 onNewProject = { viewModel.newProject() }
             )
 
-            // Main content area
+            // Center: Canvas area
             Column(modifier = Modifier.weight(1f)) {
                 if (state.previewMode) {
                     PreviewMode(viewModel = viewModel)
                 } else {
-                    // Canvas (always visible in edit mode)
                     CanvasView(
                         rootElement = state.rootElement,
                         selectedElementId = state.selectedElementId,
@@ -122,24 +90,61 @@ fun EditorScreen(
                         onMoveElement = { _, _, _ -> },
                         onZoomChange = { viewModel.setZoom(it) },
                         onPanChange = { x, y -> viewModel.setPan(x, y) },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f)
+                        modifier = Modifier.fillMaxSize().weight(1f)
                     )
+                }
+            }
 
-                    // Bottom panel (Explorer or Properties based on tab)
-                    AnimatedVisibility(
-                        visible = state.activePanel != EditorPanel.CANVAS,
-                        enter = expandVertically(expandFrom = Alignment.Top),
-                        exit = shrinkVertically(shrinkTowards = Alignment.Top)
-                    ) {
-                        BottomEditorPanel(
-                            activePanel = state.activePanel,
-                            viewModel = viewModel,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(280.dp)
-                        )
+            // Right panel: Tabbed Explorer/Properties/Toolbox
+            Column(
+                modifier = Modifier
+                    .width(280.dp)
+                    .fillMaxHeight()
+                    .background(StudioColors.BackgroundPanel)
+            ) {
+                // Compact tab bar
+                RightPanelTabs(
+                    activePanel = state.activePanel,
+                    onPanelChange = { viewModel.setActivePanel(it) },
+                    selectedElement = viewModel.selectedElement
+                )
+
+                Divider(
+                    color = StudioColors.ToolbarDivider,
+                    thickness = 1.dp
+                )
+
+                // Panel content
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (state.activePanel) {
+                        EditorPanel.EXPLORER -> {
+                            val flatList = remember(state.rootElement) {
+                                buildFlatList(state.rootElement)
+                            }
+                            DexExplorer(
+                                rootElement = state.rootElement,
+                                selectedElementId = state.selectedElementId,
+                                flatElements = flatList,
+                                onSelect = { viewModel.selectElement(it) },
+                                onToggleExpand = { viewModel.toggleExpand(it) },
+                                onDelete = { viewModel.deleteElement(it) },
+                                onDuplicate = { viewModel.duplicateElement(it) },
+                                onRename = { id, name -> viewModel.renameElement(id, name) }
+                            )
+                        }
+                        EditorPanel.PROPERTIES -> {
+                            PropertiesPanel(
+                                element = viewModel.selectedElement,
+                                onPropertyChange = { id, prop, value ->
+                                    viewModel.updateProperty(id, prop, value)
+                                }
+                            )
+                        }
+                        EditorPanel.TOOLBOX -> {
+                            ToolboxPanel(
+                                onAddElement = { viewModel.addElement(it) }
+                            )
+                        }
                     }
                 }
             }
@@ -147,6 +152,58 @@ fun EditorScreen(
     }
 }
 
+@Composable
+private fun RightPanelTabs(
+    activePanel: EditorPanel,
+    onPanelChange: (EditorPanel) -> Unit,
+    selectedElement: GuiElement?
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(32.dp).background(StudioColors.BackgroundDarker),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        listOf(
+            EditorPanel.EXPLORER to Icons.Filled.AccountTree,
+            EditorPanel.PROPERTIES to Icons.Filled.Tune,
+            EditorPanel.TOOLBOX to Icons.Filled.Widgets
+        ).forEach { (panel, icon) ->
+            val isActive = activePanel == panel
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable { onPanelChange(panel) }
+                    .background(if (isActive) StudioColors.BackgroundPanel else StudioColors.BackgroundDarker),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = if (isActive) StudioColors.Primary else StudioColors.TextTertiary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        when (panel) {
+                            EditorPanel.EXPLORER -> "Explorer"
+                            EditorPanel.PROPERTIES -> "Properties"
+                            EditorPanel.TOOLBOX -> "Toolbox"
+                        },
+                        style = StudioTypography.MonoSmall,
+                        color = if (isActive) StudioColors.Primary else StudioColors.TextTertiary,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditorTopBar(
     projectName: String,
@@ -161,97 +218,65 @@ private fun EditorTopBar(
 ) {
     Surface(
         color = StudioColors.BackgroundDarker,
-        shadowElevation = 2.dp
+        tonalElevation = 0.dp,
+        shadowElevation = 1.dp
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().height(32.dp).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // App logo / name
             Icon(
-                Icons.Filled.CropSquare,
-                contentDescription = "Roblox UI Designer",
+                Icons.Filled.Code,
+                contentDescription = null,
                 tint = StudioColors.Primary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(16.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Column {
-                Text(
-                    "Roblox UI Designer",
-                    style = StudioTypography.MonoLabel,
-                    color = StudioColors.TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    projectName,
-                    style = StudioTypography.MonoSmall,
-                    color = StudioColors.TextTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Top bar actions
-            TopBarIconButton(
-                icon = Icons.Filled.Undo,
-                label = "Undo",
-                enabled = canUndo,
-                onClick = onUndo
-            )
-            TopBarIconButton(
-                icon = Icons.Filled.Redo,
-                label = "Redo",
-                enabled = canRedo,
-                onClick = onRedo
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                projectName,
+                style = StudioTypography.MonoLabel,
+                color = StudioColors.TextPrimary,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
 
             Spacer(modifier = Modifier.width(4.dp))
 
-            TopBarIconButton(
-                icon = if (isPreviewing) Icons.Filled.Edit else Icons.Filled.PlayArrow,
-                label = if (isPreviewing) "Edit" else "Preview",
-                onClick = onPreview
-            )
-            TopBarIconButton(
-                icon = Icons.Filled.FileDownload,
-                label = "Export",
-                onClick = onExport
-            )
-            TopBarIconButton(
-                icon = Icons.Filled.AddBox,
-                label = "New",
-                onClick = onNewProject
-            )
+            // Action icons
+            listOf(
+                Icons.Filled.AddBox to "New" to onNewProject,
+                Icons.Filled.Undo to "Undo" to onUndo,
+                Icons.Filled.Redo to "Redo" to onRedo,
+                (if (isPreviewing) Icons.Filled.Edit else Icons.Filled.PlayArrow) to
+                    (if (isPreviewing) "Edit" else "Preview") to onPreview,
+                Icons.Filled.FileDownload to "Export" to onExport
+            ).forEach { (iconLabel, onClick) ->
+                val (icon, label) = iconLabel
+                val enabled = when (label) {
+                    "Undo" -> canUndo
+                    "Redo" -> canRedo
+                    else -> true
+                }
+                IconButton(
+                    onClick = onClick,
+                    enabled = enabled,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = label,
+                        tint = if (enabled) StudioColors.ToolbarIcon else StudioColors.TextDisabled,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }
 
-@Composable
-private fun TopBarIconButton(
-    icon: ImageVector,
-    label: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    IconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.size(36.dp)
-    ) {
-        Icon(
-            icon,
-            contentDescription = label,
-            tint = if (enabled) StudioColors.ToolbarIcon else StudioColors.TextDisabled,
-            modifier = Modifier.size(20.dp)
-        )
-    }
-}
+// --- Bottom Panel (kept for backward compatibility) ---
 
 @Composable
 private fun BottomEditorPanel(
@@ -259,202 +284,65 @@ private fun BottomEditorPanel(
     viewModel: EditorViewModel,
     modifier: Modifier = Modifier
 ) {
-    val state = viewModel.state
-
-    Surface(
-        modifier = modifier,
-        color = StudioColors.Background,
-        shadowElevation = 4.dp
-    ) {
+    Box(modifier = modifier.background(StudioColors.BackgroundPanel)) {
         when (activePanel) {
             EditorPanel.EXPLORER -> {
+                val flatList = remember(viewModel.state.rootElement) {
+                    buildFlatList(viewModel.state.rootElement)
+                }
                 DexExplorer(
-                    rootElement = state.rootElement,
-                    selectedElementId = state.selectedElementId,
-                    flatElements = viewModel.flatElements,
+                    rootElement = viewModel.state.rootElement,
+                    selectedElementId = viewModel.state.selectedElementId,
+                    flatElements = flatList,
                     onSelect = { viewModel.selectElement(it) },
                     onToggleExpand = { viewModel.toggleExpand(it) },
                     onDelete = { viewModel.deleteElement(it) },
                     onDuplicate = { viewModel.duplicateElement(it) },
-                    onRename = { id, name -> viewModel.renameElement(id, name) },
-                    onToggleVisibility = { id, vis -> viewModel.setVisibility(id, vis) },
-                    onToggleLock = { id, lock -> viewModel.setLocked(id, lock) },
-                    onCopy = { viewModel.copyElement(it) },
-                    onAddElement = {
-                        // Show element type picker
-                        viewModel.addElement(ElementType.FRAME)
-                    }
+                    onRename = { id, name -> viewModel.renameElement(id, name) }
                 )
             }
             EditorPanel.PROPERTIES -> {
                 PropertiesPanel(
                     element = viewModel.selectedElement,
-                    onPropertyChange = { elementId, propName, value ->
-                        viewModel.updateProperty(elementId, propName, value)
+                    onPropertyChange = { id, prop, value ->
+                        viewModel.updateProperty(id, prop, value)
                     }
                 )
             }
             EditorPanel.TOOLBOX -> {
                 ToolboxPanel(
-                    onAddElement = { type -> viewModel.addElement(type) }
-                )
-            }
-            else -> {}
-        }
-    }
-}
-
-@Composable
-private fun MobileBottomNav(
-    activePanel: EditorPanel,
-    onPanelChange: (EditorPanel) -> Unit,
-    selectedElement: GuiElement?,
-    onDelete: () -> Unit,
-    onCopy: () -> Unit,
-    onPaste: () -> Unit,
-    hasClipboard: Boolean,
-    hasSelection: Boolean
-) {
-    Surface(
-        color = StudioColors.BackgroundDarker,
-        shadowElevation = 4.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Section tabs
-            NavTab(
-                icon = Icons.Filled.AccountTree,
-                label = "Explorer",
-                isActive = activePanel == EditorPanel.EXPLORER,
-                onClick = { onPanelChange(EditorPanel.EXPLORER) }
-            )
-            NavTab(
-                icon = Icons.Filled.Tune,
-                label = "Properties",
-                isActive = activePanel == EditorPanel.PROPERTIES,
-                onClick = { onPanelChange(EditorPanel.PROPERTIES) },
-                badge = if (selectedElement != null) "1" else null
-            )
-            NavTab(
-                icon = Icons.Filled.Widgets,
-                label = "Toolbox",
-                isActive = activePanel == EditorPanel.TOOLBOX,
-                onClick = { onPanelChange(EditorPanel.TOOLBOX) }
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Action buttons
-            if (hasSelection) {
-                SmallActionButton(
-                    icon = Icons.Filled.ContentCopy,
-                    label = "Copy",
-                    onClick = onCopy
-                )
-                SmallActionButton(
-                    icon = Icons.Filled.Delete,
-                    label = "Delete",
-                    onClick = onDelete
-                )
-            }
-            if (hasClipboard) {
-                SmallActionButton(
-                    icon = Icons.Filled.ContentPaste,
-                    label = "Paste",
-                    onClick = onPaste
+                    onAddElement = { viewModel.addElement(it) }
                 )
             }
         }
     }
 }
 
+private fun buildFlatList(element: GuiElement): List<Pair<GuiElement, Int>> {
+    val result = mutableListOf<Pair<GuiElement, Int>>()
+    fun walk(elem: GuiElement, depth: Int) {
+        result.add(elem to depth)
+        if (elem.expanded) {
+            elem.children.forEach { walk(it, depth + 1) }
+        }
+    }
+    walk(element, 0)
+    return result
+}
+
+// --- Toolbox Panel (compact) ---
+
 @Composable
-private fun NavTab(
-    icon: ImageVector,
-    label: String,
-    isActive: Boolean,
-    badge: String? = null,
-    onClick: () -> Unit
-) {
+private fun ToolboxPanel(onAddElement: (ElementType) -> Unit) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .padding(horizontal = 8.dp)
-            .clickable { onClick() }
-            .padding(vertical = 4.dp)
-    ) {
-        Box {
-            Icon(
-                icon,
-                contentDescription = label,
-                tint = if (isActive) StudioColors.Primary else StudioColors.ToolbarIcon,
-                modifier = Modifier.size(22.dp)
-            )
-            if (badge != null) {
-                Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .background(StudioColors.AccentRed, RoundedCornerShape(7.dp))
-                        .align(Alignment.TopEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        badge,
-                        style = StudioTypography.MonoSmall,
-                        color = Color.White,
-                        fontSize = MaterialTheme.typography.labelSmall.fontSize
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            label,
-            style = StudioTypography.MonoSmall,
-            color = if (isActive) StudioColors.Primary else StudioColors.TextTertiary
-        )
-    }
-}
-
-@Composable
-private fun SmallActionButton(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.size(32.dp)
-    ) {
-        Icon(
-            icon,
-            contentDescription = label,
-            tint = StudioColors.ToolbarIcon,
-            modifier = Modifier.size(18.dp)
-        )
-    }
-}
-
-@Composable
-private fun ToolboxPanel(
-    onAddElement: (ElementType) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(StudioColors.Background)
-            .padding(12.dp)
+        modifier = Modifier.fillMaxSize().background(StudioColors.BackgroundPanel).padding(8.dp)
     ) {
         Text(
             "ELEMENTS",
-            style = StudioTypography.MonoLabel,
+            style = StudioTypography.MonoSmall,
             color = StudioColors.Primary,
-            modifier = Modifier.padding(bottom = 8.dp)
+            fontSize = 9.sp,
+            modifier = Modifier.padding(bottom = 6.dp)
         )
 
         val categories = listOf(
@@ -468,27 +356,23 @@ private fun ToolboxPanel(
 
         val scrollState = rememberScrollState()
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             categories.forEach { (categoryName, types) ->
                 Text(
                     categoryName.uppercase(),
                     style = StudioTypography.MonoSmall,
                     color = StudioColors.TextTertiary,
-                    modifier = Modifier.padding(top = 4.dp)
+                    fontSize = 9.sp,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     types.forEach { type ->
-                        ToolboxItem(
-                            type = type,
-                            onClick = { onAddElement(type) }
-                        )
+                        ToolboxItem(type = type, onClick = { onAddElement(type) })
                     }
                 }
             }
@@ -497,19 +381,15 @@ private fun ToolboxPanel(
 }
 
 @Composable
-private fun ToolboxItem(
-    type: ElementType,
-    onClick: () -> Unit
-) {
+private fun ToolboxItem(type: ElementType, onClick: () -> Unit) {
     val iconData = getElementIcon(type)
-
     Box(
         modifier = Modifier
-            .size(width = 64.dp, height = 56.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .size(width = 54.dp, height = 44.dp)
+            .clip(RoundedCornerShape(6.dp))
             .background(StudioColors.Surface)
             .clickable { onClick() }
-            .border(1.dp, StudioColors.SurfaceHighlight, RoundedCornerShape(8.dp)),
+            .border(1.dp, StudioColors.SurfaceHighlight, RoundedCornerShape(6.dp)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -517,13 +397,14 @@ private fun ToolboxItem(
                 iconData.icon,
                 contentDescription = type.displayName,
                 tint = iconData.color,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(14.dp)
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(1.dp))
             Text(
                 type.displayName,
                 style = StudioTypography.MonoSmall,
                 color = StudioColors.TextSecondary,
+                fontSize = 8.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -531,38 +412,24 @@ private fun ToolboxItem(
     }
 }
 
+// --- Preview Mode ---
+
 @Composable
-private fun PreviewMode(
-    viewModel: EditorViewModel
-) {
+private fun PreviewMode(viewModel: EditorViewModel) {
     val state = viewModel.state
     var selectedElementId by remember { mutableStateOf<String?>(null) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(StudioColors.BackgroundCanvas)
-    ) {
-        // Render a "PlayerGui" preview
+    Box(modifier = Modifier.fillMaxSize().background(StudioColors.BackgroundCanvas)) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(StudioColors.BackgroundDarker)
-                .padding(16.dp)
+            modifier = Modifier.fillMaxSize().background(StudioColors.BackgroundDarker).padding(12.dp)
         ) {
-            // Device frame
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(StudioColors.Background)
-                    .border(
-                        2.dp,
-                        StudioColors.SurfaceHighlight,
-                        RoundedCornerShape(16.dp)
-                    )
+                    .border(2.dp, StudioColors.SurfaceHighlight, RoundedCornerShape(12.dp))
             ) {
-                // Render elements in preview mode
                 CanvasView(
                     rootElement = state.rootElement,
                     selectedElementId = selectedElementId,
@@ -573,29 +440,92 @@ private fun PreviewMode(
                     onMoveElement = { _, _, _ -> },
                     onZoomChange = { viewModel.setZoom(it) },
                     onPanChange = { x, y -> viewModel.setPan(x, y) },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp)
+                    modifier = Modifier.fillMaxSize().padding(6.dp)
                 )
             }
         }
 
-        // Preview mode badge
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 8.dp)
-                .background(
-                    StudioColors.AccentRed.copy(alpha = 0.9f),
-                    RoundedCornerShape(4.dp)
-                )
-                .padding(horizontal = 12.dp, vertical = 4.dp)
+                .padding(top = 6.dp)
+                .background(StudioColors.AccentRed.copy(alpha = 0.9f), RoundedCornerShape(3.dp))
+                .padding(horizontal = 8.dp, vertical = 2.dp)
         ) {
             Text(
-                "PREVIEW MODE",
+                "PREVIEW",
                 style = StudioTypography.MonoLabel,
-                color = Color.White
+                color = Color.White,
+                fontSize = 9.sp
             )
         }
+    }
+}
+
+// Keep MobileBottomNav for backward compatibility
+@Composable
+private fun MobileBottomNav(
+    activePanel: EditorPanel,
+    onPanelChange: (EditorPanel) -> Unit,
+    selectedElement: GuiElement?,
+    onDelete: () -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit,
+    hasClipboard: Boolean,
+    hasSelection: Boolean
+) {
+    Surface(color = StudioColors.BackgroundDarker, shadowElevation = 2.dp) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf(
+                EditorPanel.EXPLORER to Icons.Filled.AccountTree to "Explorer",
+                EditorPanel.PROPERTIES to Icons.Filled.Tune to "Properties",
+                EditorPanel.TOOLBOX to Icons.Filled.Widgets to "Toolbox"
+            ).forEach { ((panel, icon), label) ->
+                NavTab(
+                    icon = icon,
+                    label = label,
+                    isActive = activePanel == panel,
+                    badge = if (panel == EditorPanel.PROPERTIES && selectedElement != null) "1" else null,
+                    onClick = { onPanelChange(panel) }
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            if (hasSelection) {
+                SmallActionButton(Icons.Filled.ContentCopy, "Copy", onClick = onCopy)
+                SmallActionButton(Icons.Filled.Delete, "Delete", onClick = onDelete)
+            }
+            if (hasClipboard) {
+                SmallActionButton(Icons.Filled.ContentPaste, "Paste", onClick = onPaste)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavTab(icon: ImageVector, label: String, isActive: Boolean, badge: String? = null, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 6.dp).clickable { onClick() }.padding(vertical = 2.dp)
+    ) {
+        Box {
+            Icon(icon, contentDescription = label, tint = if (isActive) StudioColors.Primary else StudioColors.ToolbarIcon, modifier = Modifier.size(18.dp))
+            if (badge != null) {
+                Box(modifier = Modifier.size(12.dp).background(StudioColors.AccentRed, RoundedCornerShape(6.dp)).align(Alignment.TopEnd), contentAlignment = Alignment.Center) {
+                    Text(badge, style = StudioTypography.MonoSmall, color = Color.White, fontSize = 8.sp)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(label, style = StudioTypography.MonoSmall, color = if (isActive) StudioColors.Primary else StudioColors.TextTertiary, fontSize = 9.sp)
+    }
+}
+
+@Composable
+private fun SmallActionButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(28.dp)) {
+        Icon(icon, contentDescription = label, tint = StudioColors.ToolbarIcon, modifier = Modifier.size(16.dp))
     }
 }
