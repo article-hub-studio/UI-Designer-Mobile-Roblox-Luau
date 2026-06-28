@@ -117,7 +117,6 @@ fun EditorScreen(viewModel: EditorViewModel) {
                 // Panel content
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (state.activePanel) {
-                        else -> {}
                         EditorPanel.EXPLORER -> {
                             val flatList = remember(state.rootElement) {
                                 buildFlatList(state.rootElement)
@@ -146,6 +145,7 @@ fun EditorScreen(viewModel: EditorViewModel) {
                                 onAddElement = { viewModel.addElement(it) }
                             )
                         }
+                        else -> {}
                     }
                 }
             }
@@ -190,10 +190,10 @@ private fun RightPanelTabs(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         when (panel) {
-                        else -> {}
                             EditorPanel.EXPLORER -> "Explorer"
                             EditorPanel.PROPERTIES -> "Properties"
                             EditorPanel.TOOLBOX -> "Toolbox"
+                            else -> ""
                         },
                         style = StudioTypography.MonoSmall,
                         color = if (isActive) StudioColors.Primary else StudioColors.TextTertiary,
@@ -286,7 +286,6 @@ private fun BottomEditorPanel(
     viewModel: EditorViewModel,
     modifier: Modifier = Modifier
 ) {
-                else -> {}
     Box(modifier = modifier.background(StudioColors.BackgroundPanel)) {
         when (activePanel) {
             EditorPanel.EXPLORER -> {
@@ -317,6 +316,7 @@ private fun BottomEditorPanel(
                     onAddElement = { viewModel.addElement(it) }
                 )
             }
+            else -> {}
         }
     }
 }
