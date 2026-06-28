@@ -26,9 +26,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
-import kotlin.math.cos
-import kotlin.math.roundToInt
-import kotlin.math.sin
+import androidx.compose.ui.unit.sp
 import com.robloxui.designer.model.ElementType
 import com.robloxui.designer.model.GuiElement
 import com.robloxui.designer.model.PropValue
@@ -153,7 +151,7 @@ private fun CanvasInfoBadge(text: String) {
         text = text,
         style = StudioTypography.MonoSmall,
         color = StudioColors.TextTertiary,
-        fontSize = androidx.compose.ui.unit.sp(9),
+        fontSize = 9.sp,
         modifier = Modifier
             .background(StudioColors.Background.copy(alpha = 0.7f), RoundedCornerShape(3.dp))
             .padding(horizontal = 4.dp, vertical = 1.dp)
@@ -225,7 +223,7 @@ private fun CanvasElementRenderer(
             text = "${element.type.displayName}[${element.name}]",
             style = StudioTypography.MonoSmall,
             color = StudioColors.TextTertiary,
-            fontSize = androidx.compose.ui.unit.sp(8),
+            fontSize = 8.sp,
             maxLines = 1,
             modifier = Modifier
                 .align(Alignment.TopStart)
