@@ -315,7 +315,7 @@ private fun PropertiesContent(
                     PropertyValueEditor(
                         prop = prop,
                         onValueChange = { newValue ->
-                            onPropertyChange(element.id, prop.key, newValue)
+                            onPropertyChange(element.id, prop.name, newValue)
                         }
                     )
                 }
