@@ -117,6 +117,7 @@ fun EditorScreen(viewModel: EditorViewModel) {
                 // Panel content
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (state.activePanel) {
+                        else -> {}
                         EditorPanel.EXPLORER -> {
                             val flatList = remember(state.rootElement) {
                                 buildFlatList(state.rootElement)
@@ -189,6 +190,7 @@ private fun RightPanelTabs(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         when (panel) {
+                        else -> {}
                             EditorPanel.EXPLORER -> "Explorer"
                             EditorPanel.PROPERTIES -> "Properties"
                             EditorPanel.TOOLBOX -> "Toolbox"
@@ -284,6 +286,7 @@ private fun BottomEditorPanel(
     viewModel: EditorViewModel,
     modifier: Modifier = Modifier
 ) {
+                else -> {}
     Box(modifier = modifier.background(StudioColors.BackgroundPanel)) {
         when (activePanel) {
             EditorPanel.EXPLORER -> {
@@ -479,11 +482,13 @@ private fun MobileBottomNav(
             modifier = Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            listOf(
-                EditorPanel.EXPLORER to Icons.Filled.AccountTree to "Explorer",
-                EditorPanel.PROPERTIES to Icons.Filled.Tune to "Properties",
-                EditorPanel.TOOLBOX to Icons.Filled.Widgets to "Toolbox"
-            ).forEach { ((panel, icon), label) ->
+            val tabs = mapOf(
+                EditorPanel.EXPLORER to (Icons.Filled.AccountTree to "Explorer"),
+                EditorPanel.PROPERTIES to (Icons.Filled.Tune to "Properties"),
+                EditorPanel.TOOLBOX to (Icons.Filled.Widgets to "Toolbox")
+            )
+            tabs.forEach { (panel, pair) ->
+                val (icon, label) = pair
                 NavTab(
                     icon = icon,
                     label = label,

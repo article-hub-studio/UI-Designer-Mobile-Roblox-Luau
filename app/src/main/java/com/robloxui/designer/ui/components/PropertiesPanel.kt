@@ -303,17 +303,16 @@ private fun PropertiesContent(
     onPropertyChange: (String, String, PropValue) -> Unit
 ) {
     val props = element.properties.values.toList()
-    val categories = props.groupBy { it.category }
+    val categories = props.groupBy { it.category.displayName }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 2.dp)
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         categories.forEach { (category, categoryProps) ->
-            item(key = "cat_$category") {
-                PropertyCategory(name = category)
-            }
-            items(categoryProps, key = { "${element.id}_${it.key}" }) { prop ->
+            PropertyCategory(name = category)
+            categoryProps.forEach { prop ->
                 PropertyRow(label = prop.displayName) {
                     PropertyValueEditor(
                         prop = prop,

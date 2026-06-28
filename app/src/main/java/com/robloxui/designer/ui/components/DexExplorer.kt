@@ -76,7 +76,7 @@ fun DexExplorer(
                     element = element,
                     depth = depth,
                     isSelected = element.id == selectedElementId,
-                    isRoot = element.parentId == null,
+
                     onSelect = { onSelect(element.id) },
                     onToggleExpand = { onToggleExpand(element.id) },
                     onDelete = { onDelete(element.id) },
@@ -93,7 +93,6 @@ private fun ExplorerRow(
     element: GuiElement,
     depth: Int,
     isSelected: Boolean,
-    isRoot: Boolean,
     onSelect: () -> Unit,
     onToggleExpand: () -> Unit,
     onDelete: () -> Unit,
