@@ -82,7 +82,8 @@ fun DexExplorer(
                     onToggleExpand = { onToggleExpand(element.id) },
                     onDelete = { onDelete(element.id) },
                     onDuplicate = { onDuplicate(element.id) },
-                    onRename = { name -> onRename(element.id, name) }
+                    onRename = { name -> onRename(element.id, name) },
+                    onToggleVisibility = { visible -> onToggleVisibility?.invoke(element.id, visible) }
                 )
             }
         }
@@ -98,7 +99,8 @@ private fun ExplorerRow(
     onToggleExpand: () -> Unit,
     onDelete: () -> Unit,
     onDuplicate: () -> Unit,
-    onRename: (String) -> Unit
+    onRename: (String) -> Unit,
+    onToggleVisibility: ((Boolean) -> Unit)? = null
 ) {
     var isEditing by remember { mutableStateOf(false) }
     var editText by remember(element.name) { mutableStateOf(element.name) }
@@ -214,7 +216,7 @@ private fun ExplorerRow(
             if (element.visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
             contentDescription = if (element.visible) "Hide" else "Show",
             tint = if (element.visible) StudioColors.TextTertiary else StudioColors.TextDisabled,
-            modifier = Modifier.size(12.dp).clickable { onToggleVisibility?.invoke(element.id, !element.visible) }
+            modifier = Modifier.size(12.dp).clickable { onToggleVisibility?.invoke(!element.visible) }
         )
 
         // Context menu trigger

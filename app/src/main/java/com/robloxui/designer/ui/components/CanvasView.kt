@@ -33,12 +33,6 @@ import com.robloxui.designer.ui.theme.StudioTypography
 /**
  * The main design canvas that renders a preview of all GUI elements.
  * Features: pinch-to-zoom, pan, grid, element selection.
- *
- * Gesture handling:
- *  - Single-finger drag: pans the canvas
- *  - Pinch: zooms in/out
- *  - Tap: selects element
- *  - Element drag-to-move: via MOVE tool (future)
  */
 @Composable
 fun CanvasView(
@@ -63,7 +57,7 @@ fun CanvasView(
             .drawBehind {
                 drawCanvasGrid(canvasSize, panX, panY, zoom)
             }
-            // Pan (single-finger drag) + pinch-to-zoom
+            // Pan + pinch-to-zoom
             .pointerInput(zoom) {
                 detectTransformGestures { _, pan, gestureZoom, _ ->
                     if (gestureZoom != 1f) {
@@ -74,7 +68,7 @@ fun CanvasView(
                     }
                 }
             }
-            // Tap to select (convert screen coords to world coords)
+            // Tap to select
             .pointerInput(rootElement.id) {
                 detectTapGestures { offset ->
                     val worldX = (offset.x - panX) / zoom
@@ -107,77 +101,53 @@ fun CanvasView(
             }
         }
 
-        // Overlays
-        CanvasOverlays(
-            zoom = zoom,
-            panX = panX,
-            panY = panY,
-            elementCount = countElements(rootElement),
-            onZoomChange = onZoomChange,
-            onPanChange = onPanChange
-        )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Overlays (info badges + zoom controls)
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun CanvasOverlays(
-    zoom: Float,
-    panX: Float,
-    panY: Float,
-    elementCount: Int,
-    onZoomChange: (Float) -> Unit,
-    onPanChange: (Float, Float) -> Unit
-) {
-    // Top-left info badges
-    Column(
-        modifier = Modifier
-            .align(Alignment.TopStart)
-            .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        CanvasInfoBadge("Zoom: ${(zoom * 100).toInt()}%")
-        CanvasInfoBadge("$elementCount instances")
-    }
-
-    // Zoom controls (bottom-right)
-    Row(
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        SmallIconButton(
-            icon = Icons.Filled.ZoomOut,
-            onClick = { onZoomChange((zoom - 0.1f).coerceAtLeast(0.1f)) }
-        )
-        SmallIconButton(
-            icon = Icons.Filled.ZoomIn,
-            onClick = { onZoomChange((zoom + 0.1f).coerceAtMost(5f)) }
-        )
-        SmallIconButton(
-            icon = Icons.Filled.FitScreen,
-            onClick = {
-                onZoomChange(1f)
-                onPanChange(0f, 0f)
-            }
-        )
-    }
-
-    // Pan hint
-    if (zoom != 1f || panX != 0f || panY != 0f) {
-        Text(
-            "Drag to pan · Pinch to zoom",
-            style = StudioTypography.MonoSmall,
-            color = StudioColors.TextTertiary,
-            fontSize = 9.sp,
+        // Top-left info badges
+        Column(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(8.dp)
-        )
+                .align(Alignment.TopStart)
+                .padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            CanvasInfoBadge("Zoom: ${(zoom * 100).toInt()}%")
+            CanvasInfoBadge("${countElements(rootElement)} instances")
+        }
+
+        // Zoom controls (bottom-right)
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            SmallIconButton(
+                icon = Icons.Filled.ZoomOut,
+                onClick = { onZoomChange((zoom - 0.1f).coerceAtLeast(0.1f)) }
+            )
+            SmallIconButton(
+                icon = Icons.Filled.ZoomIn,
+                onClick = { onZoomChange((zoom + 0.1f).coerceAtMost(5f)) }
+            )
+            SmallIconButton(
+                icon = Icons.Filled.FitScreen,
+                onClick = {
+                    onZoomChange(1f)
+                    onPanChange(0f, 0f)
+                }
+            )
+        }
+
+        // Pan hint
+        if (zoom != 1f || panX != 0f || panY != 0f) {
+            Text(
+                "Drag to pan · Pinch to zoom",
+                style = StudioTypography.MonoSmall,
+                color = StudioColors.TextTertiary,
+                fontSize = 9.sp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(8.dp)
+            )
+        }
     }
 }
 
@@ -185,10 +155,6 @@ private fun CanvasOverlays(
 // Element renderer
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Recursively renders a single GUI element and its children.
- * Uses UDim2 position/sizing to match Roblox's layout system.
- */
 @Composable
 private fun CanvasElementRenderer(
     element: GuiElement,
@@ -201,7 +167,6 @@ private fun CanvasElementRenderer(
 
     val isSelected = element.id == selectedElementId
 
-    // UDim2 position & size
     val elemPos = element.prop("Position")?.value as? PropValue.UDim2Value
     val elemSize = element.prop("Size")?.value as? PropValue.UDim2Value
 
@@ -217,7 +182,7 @@ private fun CanvasElementRenderer(
         modifier = Modifier
             .offset(x = elemX, y = elemY)
             .size(elemWidth, elemHeight)
-            .then(getBoxStyle(element, isSelected))
+            .then(getBoxStyle(element))
             .clickable { onSelect(element.id) }
     ) {
         // Selection indicator
@@ -290,7 +255,7 @@ private fun CanvasElementRenderer(
 // Style helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-private fun getBoxStyle(element: GuiElement, isSelected: Boolean): Modifier {
+private fun getBoxStyle(element: GuiElement): Modifier {
     val bgColor = element.prop("BackgroundColor3")?.value as? PropValue.ColorValue
     val bgTrans = element.prop("BackgroundTransparency")?.value as? PropValue.FloatValue
     val borderSize = element.prop("BorderSizePixel")?.value as? PropValue.IntValue
@@ -303,10 +268,10 @@ private fun getBoxStyle(element: GuiElement, isSelected: Boolean): Modifier {
     val alpha = 1f - (bgTrans?.value ?: 0.2f)
     mod = mod.background(bg.copy(alpha = alpha.coerceIn(0f, 1f)))
 
-    // Clip to bounds if ClipsDescendants is true
+    // Clip to bounds if ClipsDescendants is true (use graphicsLayer for compatibility)
     val clipsDescendants = element.prop("ClipsDescendants")?.value as? PropValue.BoolValue
     if (clipsDescendants?.value == true) {
-        mod = mod.clipToBounds()
+        mod = mod.graphicsLayer { clip = true }
     }
 
     if (borderSize != null && borderSize.value > 0 && borderColor != null) {
@@ -320,20 +285,15 @@ private fun getBoxStyle(element: GuiElement, isSelected: Boolean): Modifier {
 // Grid drawing
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Draw the Roblox Studio-style grid on the canvas background.
- * Grid follows pan offset so it appears to scroll with the content.
- */
 private fun DrawScope.drawCanvasGrid(canvasSize: Size, panX: Float, panY: Float, zoom: Float) {
     val gridMinor = 20.dp.toPx() * zoom
     val gridMajor = 100.dp.toPx() * zoom
 
-    if (gridMinor < 6f) return // too zoomed out
+    if (gridMinor < 6f) return
 
     val right = canvasSize.width
     val bottom = canvasSize.height
 
-    // Grid offset by pan position
     val gridOffsetX = panX % gridMinor
     val gridOffsetY = panY % gridMinor
     val gridMajorOffsetX = panX % gridMajor
@@ -366,7 +326,7 @@ private fun DrawScope.drawCanvasGrid(canvasSize: Size, panX: Float, panY: Float,
         y += gridMajor
     }
 
-    // Origin crosshair at world (0,0) → screen (panX, panY)
+    // Origin crosshair
     val ox = panX
     val oy = panY
     if (ox in -50f..right + 50f && oy in -50f..bottom + 50f) {
@@ -391,9 +351,6 @@ private fun calculateUDim(scale: Float, offset: Float, parentSize: Dp): Dp {
 /**
  * Hit-test: walk the tree in reverse order (topmost first),
  * checking if the point is within each element's bounds.
- *
- * Returns the deepest visible element at (worldX, worldY),
- * or null if nothing was hit.
  */
 private fun hitTestElement(
     element: GuiElement,
@@ -404,14 +361,12 @@ private fun hitTestElement(
 ): GuiElement? {
     if (!element.visible) return null
 
-    // Calculate element bounds in pixels
     val elemPos = element.prop("Position")?.value as? PropValue.UDim2Value
     val elemSize = element.prop("Size")?.value as? PropValue.UDim2Value
 
     val pos = elemPos ?: PropValue.UDim2Value(0f, 0f, 0f, 0f)
     val sz = elemSize ?: PropValue.UDim2Value(1f, 0f, 1f, 0f)
 
-    // Calculate pixel bounds
     val parentW = canvasSize.width
     val parentH = canvasSize.height
 
