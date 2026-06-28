@@ -87,7 +87,7 @@ fun EditorScreen(viewModel: EditorViewModel) {
                         panX = state.panOffsetX,
                         panY = state.panOffsetY,
                         onSelect = { viewModel.selectElement(it) },
-                        onMoveElement = { _, _, _ -> },
+                        onMoveElement = { id, dx, dy -> viewModel.moveElementByDelta(id, dx, dy) },
                         onZoomChange = { viewModel.setZoom(it) },
                         onPanChange = { x, y -> viewModel.setPan(x, y) },
                         modifier = Modifier.fillMaxSize().weight(1f)
@@ -440,7 +440,7 @@ private fun PreviewMode(viewModel: EditorViewModel) {
                     panX = state.panOffsetX,
                     panY = state.panOffsetY,
                     onSelect = { selectedElementId = it },
-                    onMoveElement = { _, _, _ -> },
+                    onMoveElement = { id, dx, dy -> viewModel.moveElementByDelta(id, dx, dy) },
                     onZoomChange = { viewModel.setZoom(it) },
                     onPanChange = { x, y -> viewModel.setPan(x, y) },
                     modifier = Modifier.fillMaxSize().padding(6.dp)

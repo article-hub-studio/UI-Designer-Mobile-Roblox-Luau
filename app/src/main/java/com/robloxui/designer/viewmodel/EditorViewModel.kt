@@ -122,6 +122,13 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    fun moveElementByDelta(elementId: String, dx: Float, dy: Float) {
+        val element = state.rootElement.findById(elementId) ?: return
+        val pos = element.prop("Position")?.value as? PropValue.UDim2Value ?: return
+        val newPos = pos.copy(xOffset = pos.xOffset + dx, yOffset = pos.yOffset + dy)
+        updateProperty(elementId, "Position", newPos)
+    }
+
     fun moveElement(elementId: String, newParentId: String, index: Int = -1) {
         val element = state.rootElement.findById(elementId) ?: return
         if (elementId == state.rootElement.id) return
