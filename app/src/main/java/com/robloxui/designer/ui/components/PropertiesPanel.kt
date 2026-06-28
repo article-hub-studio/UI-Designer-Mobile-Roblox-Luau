@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.input.ImeAction
@@ -415,7 +416,7 @@ private fun Vector2Field(
                     if (parsed != null) onValueChange(parsed)
                 }
             )
-        }
+        )
     }
 }
 
@@ -467,5 +468,3 @@ private fun TextFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedContainerColor = StudioColors.BackgroundInput,
     cursorColor = StudioColors.Primary
 )
-
-@Composable
