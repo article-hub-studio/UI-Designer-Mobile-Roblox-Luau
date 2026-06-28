@@ -58,7 +58,7 @@ fun CanvasView(
     Box(
         modifier = modifier
             .background(StudioColors.BackgroundCanvas)
-            .clipToBounds()
+            .graphicsLayer { clip = true }
             .onSizeChanged { canvasSize = Size(it.width.toFloat(), it.height.toFloat()) }
             .drawBehind {
                 drawCanvasGrid(canvasSize, zoom, panX, panY)
