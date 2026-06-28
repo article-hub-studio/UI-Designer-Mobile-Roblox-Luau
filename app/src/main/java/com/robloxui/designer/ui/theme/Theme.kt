@@ -15,39 +15,38 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.robloxui.designer.ui.theme.StudioColors.*
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Primary,
-    onPrimary = OnPrimary,
-    primaryContainer = PrimaryDim,
-    onPrimaryContainer = Primary,
-    secondary = Secondary,
+    primary = StudioColors.Primary,
+    onPrimary = StudioColors.OnPrimary,
+    primaryContainer = StudioColors.PrimaryDim,
+    onPrimaryContainer = StudioColors.Primary,
+    secondary = StudioColors.Secondary,
     onSecondary = Color.Black,
     secondaryContainer = Color(0xFF00391A),
-    onSecondaryContainer = Secondary,
-    tertiary = AccentPurple,
+    onSecondaryContainer = StudioColors.Secondary,
+    tertiary = StudioColors.AccentPurple,
     onTertiary = Color.Black,
-    background = Background,
-    onBackground = TextPrimary,
-    surface = Surface,
-    onSurface = TextPrimary,
-    surfaceVariant = SurfaceVariant,
-    onSurfaceVariant = TextSecondary,
+    background = StudioColors.Background,
+    onBackground = StudioColors.TextPrimary,
+    surface = StudioColors.Surface,
+    onSurface = StudioColors.TextPrimary,
+    surfaceVariant = StudioColors.SurfaceVariant,
+    onSurfaceVariant = StudioColors.TextSecondary,
     outline = Color(0xFF444466),
     outlineVariant = Color(0xFF333355),
-    error = AccentRed,
+    error = StudioColors.AccentRed,
     onError = Color.Black,
     errorContainer = Color(0xFF4A0010),
-    onErrorContainer = AccentRed,
+    onErrorContainer = StudioColors.AccentRed,
     inverseSurface = Color(0xFFE8E8F0),
     inverseOnSurface = Color(0xFF1A1A2E),
-    inversePrimary = PrimaryVariant,
-    scrim = Scrim
+    inversePrimary = StudioColors.PrimaryVariant,
+    scrim = StudioColors.Scrim
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryVariant,
+    primary = StudioColors.PrimaryVariant,
     onPrimary = Color.White,
     primaryContainer = Color(0xFFCCF0FF),
     onPrimaryContainer = Color(0xFF003549),
@@ -84,8 +83,8 @@ fun RobloxUIDesignerTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = BackgroundDarker.toArgb()
-            window.navigationBarColor = BackgroundDarker.toArgb()
+            window.statusBarColor = StudioColors.BackgroundDarker.toArgb()
+            window.navigationBarColor = StudioColors.BackgroundDarker.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
             WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
         }

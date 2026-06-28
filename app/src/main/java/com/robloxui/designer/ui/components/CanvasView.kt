@@ -52,7 +52,7 @@ fun CanvasView(
     Box(
         modifier = modifier
             .background(StudioColors.BackgroundCanvas)
-            .clipToBounds()
+            
             .onSizeChanged { canvasSize = Size(it.width.toFloat(), it.height.toFloat()) }
             .drawBehind {
                 drawCanvasGrid(canvasSize, zoom)
@@ -279,7 +279,7 @@ private fun getBoxStyle(element: GuiElement): Modifier {
     val borderSize = element.prop("BorderSizePixel")?.value as? PropValue.IntValue
     val borderColor = element.prop("BorderColor3")?.value as? PropValue.ColorValue
 
-    var mod = Modifier
+    var mod: Modifier = Modifier
 
     if (bgColor != null) {
         val alpha = 1f - (bgTrans?.value ?: 0f)

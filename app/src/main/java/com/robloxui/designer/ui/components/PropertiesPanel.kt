@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -298,7 +299,7 @@ private fun PropertyValueEditor(
                         style = StudioTypography.MonoSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Icon(
                         Icons.Filled.ArrowDropDown,
@@ -387,7 +388,7 @@ private fun Vector2Field(
     var text by remember(value) { mutableStateOf(String.format("%.1f", value)) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.weight(1f)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Text(
             label,
@@ -427,7 +428,7 @@ private fun UDimField(
     var text by remember(value) { mutableStateOf(String.format("%.0f", value)) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.weight(1f)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Text(
             label,

@@ -349,7 +349,7 @@ private fun ExplorerTreeItem(
                 onClick = { onDismissContextMenu(); onDuplicate() },
                 leadingIcon = { Icon(Icons.Filled.ContentCopy, null, tint = StudioColors.TextSecondary, modifier = Modifier.size(16.dp)) }
             )
-            HorizontalDivider(color = StudioColors.ToolbarDivider)
+            Divider(color = StudioColors.ToolbarDivider)
             DropdownMenuItem(
                 text = { Text("Delete", style = StudioTypography.MonoText, color = StudioColors.AccentRed) },
                 onClick = { onDismissContextMenu(); onDelete() },
