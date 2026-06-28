@@ -38,6 +38,7 @@ fun DexExplorer(
     onDelete: (String) -> Unit,
     onDuplicate: (String) -> Unit,
     onRename: (String, String) -> Unit,
+    onToggleVisibility: ((String, Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.background(StudioColors.ExplorerBg)) {
@@ -213,7 +214,7 @@ private fun ExplorerRow(
             if (element.visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
             contentDescription = if (element.visible) "Hide" else "Show",
             tint = if (element.visible) StudioColors.TextTertiary else StudioColors.TextDisabled,
-            modifier = Modifier.size(12.dp).clickable { /* toggle visibility */ }
+            modifier = Modifier.size(12.dp).clickable { onToggleVisibility?.invoke(element.id, !element.visible) }
         )
 
         // Context menu trigger

@@ -129,7 +129,8 @@ fun EditorScreen(viewModel: EditorViewModel) {
                                 onToggleExpand = { viewModel.toggleExpand(it) },
                                 onDelete = { viewModel.deleteElement(it) },
                                 onDuplicate = { viewModel.duplicateElement(it) },
-                                onRename = { id, name -> viewModel.renameElement(id, name) }
+                                onRename = { id, name -> viewModel.renameElement(id, name) },
+                            onToggleVisibility = { id, visible -> viewModel.setVisibility(id, visible) }
                             )
                         }
                         EditorPanel.PROPERTIES -> {
@@ -300,7 +301,8 @@ private fun BottomEditorPanel(
                     onToggleExpand = { viewModel.toggleExpand(it) },
                     onDelete = { viewModel.deleteElement(it) },
                     onDuplicate = { viewModel.duplicateElement(it) },
-                    onRename = { id, name -> viewModel.renameElement(id, name) }
+                    onRename = { id, name -> viewModel.renameElement(id, name) },
+                            onToggleVisibility = { id, visible -> viewModel.setVisibility(id, visible) }
                 )
             }
             EditorPanel.PROPERTIES -> {
