@@ -232,6 +232,40 @@ class EditorViewModel : ViewModel() {
         state = state.copy(panOffsetX = x, panOffsetY = y)
     }
 
+
+    fun toggleExpand(id: String) {
+        pushUndo()
+        val updated = updateElementInTree(id) { el ->
+            el.copy(expanded = !el.expanded)
+        }
+        state = state.copy(rootElement = updated)
+    }
+
+    fun renameElement(id: String, newName: String) {
+        pushUndo()
+        val updated = updateElementInTree(id) { el ->
+            el.copy(name = newName)
+        }
+        state = state.copy(rootElement = updated)
+    }
+
+    fun setVisibility(id: String, visible: Boolean) {
+        pushUndo()
+        val updated = updateElementInTree(id) { el ->
+            el.copy(visible = visible)
+        }
+        state = state.copy(rootElement = updated)
+    }
+
+    fun setLocked(id: String, locked: Boolean) {
+        pushUndo()
+        val updated = updateElementInTree(id) { el ->
+            el.copy(locked = locked)
+        }
+        state = state.copy(rootElement = updated)
+    }
+
+
     fun newProject() {
         pushUndo()
         state = state.copy(

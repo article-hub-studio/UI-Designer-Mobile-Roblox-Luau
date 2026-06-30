@@ -396,9 +396,10 @@ private fun ToolboxItem(type: ElementType, onClick: () -> Unit) {
             .border(1.dp, StudioColors.SurfaceHighlight, RoundedCornerShape(6.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
             VanillaElementIcon(type = type, size = 14.dp)
-            )
+
             Spacer(modifier = Modifier.height(1.dp))
             Text(
                 type.displayName,
