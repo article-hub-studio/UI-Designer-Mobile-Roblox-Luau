@@ -87,7 +87,7 @@ fun CanvasView(
                 .fillMaxSize()
                 // Tap to select - uses Unit key so it doesn't restart
                 .pointerInput(Unit) {
-                    val tapDensity = density
+                    val tapDensity = this.density
                     detectTapGestures { offset ->
                         val worldX = (offset.x - currentPanX.floatValue) / currentZoom.floatValue
                         val worldY = (offset.y - currentPanY.floatValue) / currentZoom.floatValue
@@ -252,7 +252,7 @@ private fun ResizeHandles(
                     .background(Color.White, CircleShape)
                     .border(1.dp, StudioColors.CanvasSelection, CircleShape)
                     .pointerInput(Unit) {
-                        val pointerDensity = density
+                        val pointerDensity = this.density
                         detectDragGestures { change, dragAmount ->
                             change.consume()
                             val dx = if (changesWidth) dragAmount.x / pointerDensity else 0f
@@ -304,7 +304,7 @@ private fun CanvasElementRenderer(
             .then(
                 if (!element.locked) {
                     Modifier.pointerInput(element.id) {
-                        val pointerDensity = density
+                        val pointerDensity = this.density
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
@@ -390,7 +390,7 @@ private fun CanvasElementRenderer(
 // ─────────────────────────────────────────────────────────────────────────────
 
 private fun getBoxStyle(element: GuiElement): Modifier {
-    var mod = Modifier
+    var mod: Modifier = Modifier
 
     val bgColor = element.prop("BackgroundColor3")?.value as? PropValue.ColorValue
     val bgTrans = element.prop("BackgroundTransparency")?.value as? PropValue.FloatValue
