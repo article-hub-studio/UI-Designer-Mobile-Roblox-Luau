@@ -98,7 +98,7 @@ fun EditorScreen(viewModel: EditorViewModel) {
             // Right panel: Tabbed Explorer/Properties/Toolbox
             Column(
                 modifier = Modifier
-                    .width(280.dp)
+                    .width(260.dp)
                     .fillMaxHeight()
                     .background(StudioColors.BackgroundPanel)
             ) {
@@ -239,7 +239,7 @@ private fun EditorTopBar(
                 projectName,
                 style = StudioTypography.MonoLabel,
                 color = StudioColors.TextPrimary,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -362,7 +362,7 @@ private fun ToolboxPanel(onAddElement: (ElementType) -> Unit) {
         val scrollState = rememberScrollState()
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             categories.forEach { (categoryName, types) ->
                 Text(
@@ -387,7 +387,6 @@ private fun ToolboxPanel(onAddElement: (ElementType) -> Unit) {
 
 @Composable
 private fun ToolboxItem(type: ElementType, onClick: () -> Unit) {
-    val iconData = getElementIcon(type)
     Box(
         modifier = Modifier
             .size(width = 54.dp, height = 44.dp)
@@ -398,11 +397,7 @@ private fun ToolboxItem(type: ElementType, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                iconData.icon,
-                contentDescription = type.displayName,
-                tint = iconData.color,
-                modifier = Modifier.size(14.dp)
+            VanillaElementIcon(type = type, size = 14.dp)
             )
             Spacer(modifier = Modifier.height(1.dp))
             Text(

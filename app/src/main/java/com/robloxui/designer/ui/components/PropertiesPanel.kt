@@ -74,8 +74,7 @@ private fun PropertiesHeader(element: GuiElement?) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (element != null) {
-            val iconData = getElementIcon(element.type)
-            Icon(iconData.icon, null, tint = iconData.color, modifier = Modifier.size(16.dp))
+            VanillaElementIcon(type = element.type, size = 16.dp)
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 element.name,

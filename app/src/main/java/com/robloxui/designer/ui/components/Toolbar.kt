@@ -160,7 +160,6 @@ private fun CompactAddButton(
     type: ElementType,
     onClick: () -> Unit
 ) {
-    val elementIconData = getElementIcon(type)
     Box(
         modifier = Modifier
             .size(30.dp)
@@ -169,6 +168,6 @@ private fun CompactAddButton(
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = null, tint = elementIconData.color, modifier = Modifier.size(16.dp))
+        VanillaElementIcon(type = type, size = 16.dp)
     }
 }

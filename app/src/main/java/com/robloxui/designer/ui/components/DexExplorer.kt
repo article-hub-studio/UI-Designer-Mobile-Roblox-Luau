@@ -157,12 +157,9 @@ private fun ExplorerRow(
 
         Spacer(modifier = Modifier.width(2.dp))
 
-        // Element icon
-        val iconData = getElementIcon(element.type)
-        Icon(
-            iconData.icon,
-            contentDescription = element.type.displayName,
-            tint = if (element.visible) iconData.color else StudioColors.TextDisabled,
+        // Element icon (Vanilla Roblox style)
+        VanillaElementIcon(
+            type = element.type,
             modifier = Modifier.size(12.dp)
         )
 

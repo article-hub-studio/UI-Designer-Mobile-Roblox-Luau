@@ -2,7 +2,7 @@ package com.robloxui.designer.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Roblox Studio-inspired color palette
+// Roblox Studio-inspired dark color palette
 object StudioColors {
     // Backgrounds
     val Background = Color(0xFF1A1A2E)

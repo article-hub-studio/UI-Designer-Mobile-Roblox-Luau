@@ -126,65 +126,11 @@ class EditorViewModel : ViewModel() {
         val element = state.rootElement.findById(elementId) ?: return
         val pos = element.prop("Position")?.value as? PropValue.UDim2Value ?: return
         val newPos = pos.copy(xOffset = pos.xOffset + dx, yOffset = pos.yOffset + dy)
-        updateProperty(elementId, "Position", newPos)
-    }
-
-    fun moveElement(elementId: String, newParentId: String, index: Int = -1) {
-        val element = state.rootElement.findById(elementId) ?: return
-        if (elementId == state.rootElement.id) return
-
-        pushUndo()
-        // Remove from old parent
-        val afterRemove = removeFromTree(state.rootElement, elementId)
-        // Add to new parent
-        val updated = if (newParentId == state.rootElement.id) {
-            afterRemove.addChild(element)
-        } else {
-            updateElementInTree(afterRemove, newParentId) { parent ->
-                if (index >= 0 && index < parent.children.size) {
-                    val list = parent.children.toMutableList()
-                    list.add(index, element)
-                    parent.copy(children = list)
-                } else {
-                    parent.addChild(element)
-                }
-            }
+        // Push undo on first drag delta only (dx != 0 or dy != 0)
+        if (dx != 0f || dy != 0f) {
+            updateProperty(elementId, "Position", newPos)
         }
-        state = state.copy(rootElement = updated)
     }
-
-    fun renameElement(id: String, newName: String) {
-        pushUndo()
-        val updated = updateElementInTree(id) { el ->
-            el.copy(name = newName)
-        }
-        state = state.copy(rootElement = updated)
-    }
-
-    fun toggleExpand(id: String) {
-        val updated = updateElementInTree(id) { el ->
-            el.copy(expanded = !el.expanded)
-        }
-        state = state.copy(rootElement = updated)
-    }
-
-    fun setVisibility(id: String, visible: Boolean) {
-        pushUndo()
-        val updated = updateElementInTree(id) { el ->
-            el.copy(visible = visible)
-        }
-        state = state.copy(rootElement = updated)
-    }
-
-    fun setLocked(id: String, locked: Boolean) {
-        pushUndo()
-        val updated = updateElementInTree(id) { el ->
-            el.copy(locked = locked)
-        }
-        state = state.copy(rootElement = updated)
-    }
-
-    // ── Property editing ──
 
     fun updateProperty(elementId: String, propName: String, newValue: PropValue) {
         pushUndo()

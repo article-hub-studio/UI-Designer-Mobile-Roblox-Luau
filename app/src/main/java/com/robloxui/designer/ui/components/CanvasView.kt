@@ -32,7 +32,13 @@ import com.robloxui.designer.ui.theme.StudioTypography
 
 /**
  * The main design canvas that renders a preview of all GUI elements.
- * Features: pinch-to-zoom, pan, grid, element selection.
+ * Features: pinch-to-zoom, pan, grid, element selection, drag-to-move.
+ *
+ * Gesture handling:
+ *  - Single-finger drag on elements: moves the element
+ *  - Single-finger drag on empty canvas: pans the viewport
+ *  - Pinch: zooms in/out
+ *  - Tap: selects element
  */
 @Composable
 fun CanvasView(
@@ -57,7 +63,7 @@ fun CanvasView(
             .drawBehind {
                 drawCanvasGrid(canvasSize, panX, panY, zoom)
             }
-            // Pan + pinch-to-zoom
+            // Canvas pan: only activates on empty areas or with 2 fingers
             .pointerInput(zoom) {
                 detectTransformGestures { _, pan, gestureZoom, _ ->
                     if (gestureZoom != 1f) {
@@ -96,7 +102,8 @@ fun CanvasView(
                     selectedElementId = selectedElementId,
                     canvasWidth = with(density) { canvasSize.width.toDp() },
                     canvasHeight = with(density) { canvasSize.height.toDp() },
-                    onSelect = onSelect
+                    onSelect = onSelect,
+                    onMoveElement = onMoveElement
                 )
             }
         }
@@ -161,7 +168,8 @@ private fun CanvasElementRenderer(
     selectedElementId: String?,
     canvasWidth: Dp,
     canvasHeight: Dp,
-    onSelect: (String?) -> Unit = {}
+    onSelect: (String?) -> Unit = {},
+    onMoveElement: (String, Float, Float) -> Unit = { _, _, _ -> }
 ) {
     if (!element.visible) return
 
@@ -184,6 +192,21 @@ private fun CanvasElementRenderer(
             .size(elemWidth, elemHeight)
             .then(getBoxStyle(element))
             .clickable { onSelect(element.id) }
+            // Drag to move (only for unlocked, non-root elements)
+            .then(
+                if (!element.locked) {
+                    Modifier.pointerInput(element.id) {
+                        detectDragGestures(
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                // Drag amount is in pixels; convert to dp for UDim2 offset
+                                val scaleFactor = this.density
+                                onMoveElement(element.id, dragAmount.x / scaleFactor, dragAmount.y / scaleFactor)
+                            }
+                        )
+                    }
+                } else Modifier
+            )
     ) {
         // Selection indicator
         if (isSelected) {
@@ -196,10 +219,8 @@ private fun CanvasElementRenderer(
 
         // Empty container hint
         if (element.children.isEmpty() && element.type.canHaveChildren) {
-            Icon(
-                getElementIcon(element.type).icon,
-                contentDescription = null,
-                tint = StudioColors.TextDisabled.copy(alpha = 0.3f),
+            VanillaElementIcon(
+                type = element.type,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(24.dp)
@@ -244,7 +265,8 @@ private fun CanvasElementRenderer(
                     selectedElementId = selectedElementId,
                     canvasWidth = if (elemWidth > 0.dp) elemWidth else canvasWidth,
                     canvasHeight = if (elemHeight > 0.dp) elemHeight else canvasHeight,
-                    onSelect = onSelect
+                    onSelect = onSelect,
+                    onMoveElement = onMoveElement
                 )
             }
         }
@@ -268,7 +290,7 @@ private fun getBoxStyle(element: GuiElement): Modifier {
     val alpha = 1f - (bgTrans?.value ?: 0.2f)
     mod = mod.background(bg.copy(alpha = alpha.coerceIn(0f, 1f)))
 
-    // Clip to bounds if ClipsDescendants is true (use graphicsLayer for compatibility)
+    // Clip to bounds if ClipsDescendants is true
     val clipsDescendants = element.prop("ClipsDescendants")?.value as? PropValue.BoolValue
     if (clipsDescendants?.value == true) {
         mod = mod.graphicsLayer { clip = true }
@@ -348,10 +370,6 @@ private fun calculateUDim(scale: Float, offset: Float, parentSize: Dp): Dp {
 // Hit-test with bounds checking
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Hit-test: walk the tree in reverse order (topmost first),
- * checking if the point is within each element's bounds.
- */
 private fun hitTestElement(
     element: GuiElement,
     worldX: Float,
@@ -375,14 +393,12 @@ private fun hitTestElement(
     val pw = (parentW * sz.xScale + with(density) { sz.xOffset.dp.toPx() }).coerceAtLeast(0f)
     val ph = (parentH * sz.yScale + with(density) { sz.yOffset.dp.toPx() }).coerceAtLeast(0f)
 
-    // Check children in reverse order (topmost first)
     for (child in element.children.reversed()) {
         val childCanvasSize = Size(pw, ph)
         val hit = hitTestElement(child, worldX - px, worldY - py, childCanvasSize, density)
         if (hit != null) return hit
     }
 
-    // Check if point is within this element's bounds
     if (worldX in px..(px + pw) && worldY in py..(py + ph)) {
         return element
     }
