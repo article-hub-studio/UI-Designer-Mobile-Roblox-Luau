@@ -349,7 +349,12 @@ private fun Vector2Field(
             onValueChange = { text = it },
             singleLine = true,
             textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText, fontSize = 9.sp),
-            modifier = Modifier.weight(1f).height(20.dp),
+            modifier = Modifier.weight(1f).height(20.dp).onFocusChanged { focusState ->
+                if (!focusState.isFocused) {
+                    val parsed = text.toFloatOrNull()
+                    if (parsed != null) onValueChange(parsed)
+                }
+            },
             colors = TextFieldColors(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
@@ -357,8 +362,7 @@ private fun Vector2Field(
                     val parsed = text.toFloatOrNull()
                     if (parsed != null) onValueChange(parsed)
                 }
-            ),
-            onFocusChanged = { if (!it.isFocused) text.toFloatOrNull()?.let { onValueChange(it) } }
+            )
         )
     }
 }
@@ -386,7 +390,12 @@ private fun UDimField(
             onValueChange = { text = it },
             singleLine = true,
             textStyle = StudioTypography.MonoSmall.copy(color = StudioColors.PropValueText, fontSize = 9.sp),
-            modifier = Modifier.weight(1f).height(20.dp),
+            modifier = Modifier.weight(1f).height(20.dp).onFocusChanged { focusState ->
+                if (!focusState.isFocused) {
+                    val parsed = text.toFloatOrNull()
+                    if (parsed != null) onValueChange(parsed)
+                }
+            },
             colors = TextFieldColors(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
@@ -394,8 +403,7 @@ private fun UDimField(
                     val parsed = text.toFloatOrNull()
                     if (parsed != null) onValueChange(parsed)
                 }
-            ),
-            onFocusChanged = { if (!it.isFocused) text.toFloatOrNull()?.let { onValueChange(it) } }
+            )
         )
     }
 }

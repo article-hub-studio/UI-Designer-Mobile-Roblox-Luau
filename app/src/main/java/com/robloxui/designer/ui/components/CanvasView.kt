@@ -252,10 +252,11 @@ private fun ResizeHandles(
                     .background(Color.White, CircleShape)
                     .border(1.dp, StudioColors.CanvasSelection, CircleShape)
                     .pointerInput(Unit) {
+                        val pointerDensity = density
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            val dx = if (changesWidth) dragAmount.x / density else 0f
-                            val dy = if (changesHeight) dragAmount.y / density else 0f
+                            val dx = if (changesWidth) dragAmount.x / pointerDensity else 0f
+                            val dy = if (changesHeight) dragAmount.y / pointerDensity else 0f
                             onResize(dx, dy, changesWidth, changesHeight)
                         }
                     }
@@ -303,10 +304,11 @@ private fun CanvasElementRenderer(
             .then(
                 if (!element.locked) {
                     Modifier.pointerInput(element.id) {
+                        val pointerDensity = density
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                onMoveElement(element.id, dragAmount.x / density, dragAmount.y / density)
+                                onMoveElement(element.id, dragAmount.x / pointerDensity, dragAmount.y / pointerDensity)
                             }
                         )
                     }
