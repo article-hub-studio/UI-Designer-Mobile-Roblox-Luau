@@ -84,26 +84,29 @@ fun VanillaElementIcon(
     modifier: Modifier = Modifier,
     size: Dp = 16.dp
 ) {
-    val (drawableId, fallbackIcon, color) = getVanillaIcon(type)
-    val painter: Painter? = try {
-        painterResource(id = vanilla.drawableId)
-    } catch (e: Exception) {
-        null
+    val (resId, fallbackIcon, iconColor) = getVanillaIcon(type)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hasResource = remember(resId) {
+        try {
+            context.resources.getDrawable(resId, context.theme)
+            true
+        } catch (e: android.content.res.Resources.NotFoundException) {
+            false
+        }
     }
 
-    if (painter != null) {
+    if (hasResource) {
         Icon(
-            painter = painter,
+            painter = painterResource(id = resId),
             contentDescription = type.displayName,
-            tint = Color.Unspecified, // Use PNG's original colors
+            tint = Color.Unspecified,
             modifier = modifier.size(size)
         )
     } else {
-        // Fallback to Material icon
         Icon(
-            imageVector = vanilla.fallbackIcon,
+            imageVector = fallbackIcon,
             contentDescription = type.displayName,
-            tint = vanilla.color,
+            tint = iconColor,
             modifier = modifier.size(size)
         )
     }
