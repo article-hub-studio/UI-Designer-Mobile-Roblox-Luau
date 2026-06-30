@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.robloxui.designer.model.*
@@ -356,7 +357,8 @@ private fun Vector2Field(
                     val parsed = text.toFloatOrNull()
                     if (parsed != null) onValueChange(parsed)
                 }
-            )
+            ),
+            onFocusChanged = { if (!it.isFocused) text.toFloatOrNull()?.let { onValueChange(it) } }
         )
     }
 }
@@ -392,7 +394,8 @@ private fun UDimField(
                     val parsed = text.toFloatOrNull()
                     if (parsed != null) onValueChange(parsed)
                 }
-            )
+            ),
+            onFocusChanged = { if (!it.isFocused) text.toFloatOrNull()?.let { onValueChange(it) } }
         )
     }
 }

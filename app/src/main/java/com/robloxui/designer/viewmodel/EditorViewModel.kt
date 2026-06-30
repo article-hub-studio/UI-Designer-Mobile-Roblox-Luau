@@ -126,10 +126,31 @@ class EditorViewModel : ViewModel() {
         val element = state.rootElement.findById(elementId) ?: return
         val pos = element.prop("Position")?.value as? PropValue.UDim2Value ?: return
         val newPos = pos.copy(xOffset = pos.xOffset + dx, yOffset = pos.yOffset + dy)
-        // Push undo on first drag delta only (dx != 0 or dy != 0)
-        if (dx != 0f || dy != 0f) {
-            updateProperty(elementId, "Position", newPos)
+        updateProperty(elementId, "Position", newPos)
+    }
+
+    fun resizeElement(elementId: String, dx: Float, dy: Float, changeWidth: Boolean, changeHeight: Boolean) {
+        val element = state.rootElement.findById(elementId) ?: return
+        val pos = element.prop("Position")?.value as? PropValue.UDim2Value ?: return
+        val sz = element.prop("Size")?.value as? PropValue.UDim2Value ?: return
+        
+        val newPos = pos.copy(
+            xOffset = if (changeWidth) (pos.xOffset + dx) else pos.xOffset,
+            yOffset = if (changeHeight) (pos.yOffset + dy) else pos.yOffset
+        )
+        val newSize = sz.copy(
+            xOffset = if (changeWidth) (sz.xOffset + dx) else sz.xOffset,
+            yOffset = if (changeHeight) (sz.yOffset + dy) else sz.yOffset
+        )
+        
+        pushUndo()
+        val updated1 = updateElementInTree(elementId) { el ->
+            el.withProperty("Position", newPos)
         }
+        val updated2 = updateElementInTree(updated1, elementId) { el ->
+            el.withProperty("Size", newSize)
+        }
+        state = state.copy(rootElement = updated2)
     }
 
     fun updateProperty(elementId: String, propName: String, newValue: PropValue) {

@@ -1,15 +1,23 @@
 package com.robloxui.designer.ui.components
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.PanTool
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -17,10 +25,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,68 +39,82 @@ import com.robloxui.designer.ui.theme.StudioColors
 import com.robloxui.designer.ui.theme.StudioTypography
 
 /**
- * The main design canvas that renders a preview of all GUI elements.
- * Features: pinch-to-zoom, pan, grid, element selection, drag-to-move.
+ * Main design canvas with zoom, pan, element selection, drag-to-move, and resize handles.
  *
- * Gesture handling:
- *  - Single-finger drag on elements: moves the element
- *  - Single-finger drag on empty canvas: pans the viewport
- *  - Pinch: zooms in/out
+ * Gesture architecture:
+ *  - Single-finger drag on element: moves the element
+ *  - Two-finger pinch / drag on empty area: pans/zooms the canvas
  *  - Tap: selects element
  */
 @Composable
 fun CanvasView(
     rootElement: GuiElement,
     selectedElementId: String?,
+    selectedElement: GuiElement?,
     zoom: Float,
     panX: Float,
     panY: Float,
     onSelect: (String?) -> Unit,
     onMoveElement: (String, Float, Float) -> Unit,
+    onResizeElement: ((String, Float, Float, Boolean, Boolean) -> Unit)? = null,
     onZoomChange: (Float) -> Unit,
     onPanChange: (Float, Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var canvasSize by remember { mutableStateOf(Size.Zero) }
-    val density = LocalDensity.current
+
+    // Stable state refs to avoid gesture restart on state change
+    val currentZoom = remember { mutableFloatStateOf(zoom) }
+    val currentPanX = remember { mutableFloatStateOf(panX) }
+    val currentPanY = remember { mutableFloatStateOf(panY) }
+
+    LaunchedEffect(zoom) { currentZoom.floatValue = zoom }
+    LaunchedEffect(panX) { currentPanX.floatValue = panX }
+    LaunchedEffect(panY) { currentPanY.floatValue = panY }
 
     Box(
         modifier = modifier
             .background(StudioColors.BackgroundCanvas)
             .onSizeChanged { canvasSize = Size(it.width.toFloat(), it.height.toFloat()) }
             .drawBehind {
-                drawCanvasGrid(canvasSize, panX, panY, zoom)
-            }
-            // Canvas pan: only activates on empty areas or with 2 fingers
-            .pointerInput(zoom) {
-                detectTransformGestures { _, pan, gestureZoom, _ ->
-                    if (gestureZoom != 1f) {
-                        onZoomChange((zoom * gestureZoom).coerceIn(0.1f, 5f))
-                    }
-                    if (pan.x != 0f || pan.y != 0f) {
-                        onPanChange(panX + pan.x, panY + pan.y)
-                    }
-                }
-            }
-            // Tap to select
-            .pointerInput(rootElement.id) {
-                detectTapGestures { offset ->
-                    val worldX = (offset.x - panX) / zoom
-                    val worldY = (offset.y - panY) / zoom
-                    val hit = hitTestElement(rootElement, worldX, worldY, canvasSize, density)
-                    onSelect(hit?.id)
-                }
-            }
+                drawCanvasGrid(canvasSize, currentPanX.floatValue, currentPanY.floatValue, currentZoom.floatValue)
+            },
+        contentAlignment = Alignment.TopStart
     ) {
-        // Canvas content area - zoom/pan via graphicsLayer (pixel-space)
+        // Canvas content area with zoom/pan transform
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                // Tap to select - uses Unit key so it doesn't restart
+                .pointerInput(Unit) {
+                    val tapDensity = density
+                    detectTapGestures { offset ->
+                        val worldX = (offset.x - currentPanX.floatValue) / currentZoom.floatValue
+                        val worldY = (offset.y - currentPanY.floatValue) / currentZoom.floatValue
+                        val hit = hitTestElement(rootElement, worldX, worldY, canvasSize, tapDensity)
+                        onSelect(hit?.id)
+                    }
+                }
+                // Zoom + Pan - uses Unit key so it doesn't restart on state change
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, pan, gestureZoom, _ ->
+                        if (gestureZoom != 1f) {
+                            val newZoom = (currentZoom.floatValue * gestureZoom).coerceIn(0.1f, 5f)
+                            currentZoom.floatValue = newZoom
+                            onZoomChange(newZoom)
+                        }
+                        if (pan.x != 0f || pan.y != 0f) {
+                            currentPanX.floatValue += pan.x
+                            currentPanY.floatValue += pan.y
+                            onPanChange(currentPanX.floatValue, currentPanY.floatValue)
+                        }
+                    }
+                }
                 .graphicsLayer {
-                    translationX = panX
-                    translationY = panY
-                    scaleX = zoom
-                    scaleY = zoom
+                    translationX = currentPanX.floatValue
+                    translationY = currentPanY.floatValue
+                    scaleX = currentZoom.floatValue
+                    scaleY = currentZoom.floatValue
                     transformOrigin = TransformOrigin(0f, 0f)
                 }
         ) {
@@ -100,8 +122,7 @@ fun CanvasView(
                 CanvasElementRenderer(
                     element = rootElement,
                     selectedElementId = selectedElementId,
-                    canvasWidth = with(density) { canvasSize.width.toDp() },
-                    canvasHeight = with(density) { canvasSize.height.toDp() },
+                    canvasSize = canvasSize,
                     onSelect = onSelect,
                     onMoveElement = onMoveElement
                 )
@@ -109,71 +130,158 @@ fun CanvasView(
         }
 
         // Top-left info badges
-        Column(
+        Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             CanvasInfoBadge("Zoom: ${(zoom * 100).toInt()}%")
             CanvasInfoBadge("${countElements(rootElement)} instances")
         }
 
-        // Zoom controls (bottom-right)
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            SmallIconButton(
-                icon = Icons.Filled.ZoomOut,
-                onClick = { onZoomChange((zoom - 0.1f).coerceAtLeast(0.1f)) }
-            )
-            SmallIconButton(
-                icon = Icons.Filled.ZoomIn,
-                onClick = { onZoomChange((zoom + 0.1f).coerceAtMost(5f)) }
-            )
-            SmallIconButton(
-                icon = Icons.Filled.FitScreen,
-                onClick = {
-                    onZoomChange(1f)
-                    onPanChange(0f, 0f)
+        // Resize handles on selected element (rendered in screen space)
+        if (selectedElement != null && selectedElement.id != rootElement.id) {
+            ResizeHandles(
+                element = selectedElement,
+                canvasSize = canvasSize,
+                zoom = zoom,
+                panX = panX,
+                panY = panY,
+                onResize = { dx, dy, changeW, changeH ->
+                    onResizeElement?.invoke(selectedElement.id, dx, dy, changeW, changeH)
                 }
             )
         }
 
-        // Pan hint
-        if (zoom != 1f || panX != 0f || panY != 0f) {
-            Text(
-                "Drag to pan · Pinch to zoom",
-                style = StudioTypography.MonoSmall,
-                color = StudioColors.TextTertiary,
-                fontSize = 9.sp,
+        // Bottom-right zoom controls
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(12.dp)
+                .background(StudioColors.BackgroundDarker.copy(alpha = 0.8f), RoundedCornerShape(6.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            ZoomButton(Icons.Filled.ZoomOut) { onZoomChange((zoom - 0.1f).coerceAtLeast(0.1f)) }
+            ZoomButton(Icons.Filled.ZoomIn) { onZoomChange((zoom + 0.1f).coerceAtMost(5f)) }
+            ZoomButton(Icons.Filled.PanTool) { onZoomChange(1f); onPanChange(0f, 0f) }
+        }
+    }
+}
+
+@Composable
+private fun ZoomButton(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(24.dp)) {
+        Icon(icon, contentDescription = null, tint = StudioColors.TextTertiary, modifier = Modifier.size(14.dp))
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Resize Handles for selected element
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ResizeHandles(
+    element: GuiElement,
+    canvasSize: Size,
+    zoom: Float,
+    panX: Float,
+    panY: Float,
+    onResize: (dx: Float, dy: Float, changeWidth: Boolean, changeHeight: Boolean) -> Unit
+) {
+    val density = LocalDensity.current
+    val pos = element.prop("Position")?.value as? PropValue.UDim2Value ?: return
+    val sz = element.prop("Size")?.value as? PropValue.UDim2Value ?: return
+
+    val parentW = canvasSize.width
+    val parentH = canvasSize.height
+
+    val px = parentW * pos.xScale + with(density) { pos.xOffset.dp.toPx() }
+    val py = parentH * pos.yScale + with(density) { pos.yOffset.dp.toPx() }
+    val pw = (parentW * sz.xScale + with(density) { sz.xOffset.dp.toPx() }).coerceAtLeast(20f)
+    val ph = (parentH * sz.yScale + with(density) { sz.yOffset.dp.toPx() }).coerceAtLeast(20f)
+
+    // Convert to screen space with zoom/pan
+    val screenX = px * zoom + panX
+    val screenY = py * zoom + panY
+    val screenW = pw * zoom
+    val screenH = ph * zoom
+
+    val handleSize = 10f
+    val halfHandle = handleSize / 2f
+
+    Box(
+        modifier = Modifier
+            .offset(
+                x = with(density) { screenX.toDp() },
+                y = with(density) { screenY.toDp() }
+            )
+            .size(
+                width = with(density) { screenW.toDp() },
+                height = with(density) { screenH.toDp() }
+            )
+    ) {
+        // Selection border
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .border(1.5.dp, StudioColors.CanvasSelection)
+        )
+
+        // Eight resize handles
+        val handles = listOf(
+            Triple(Offset(0f, 0f), true, true),
+            Triple(Offset(screenW, 0f), true, false),
+            Triple(Offset(0f, screenH), false, true),
+            Triple(Offset(screenW, screenH), false, false),
+            Triple(Offset(screenW / 2f, 0f), true, false),
+            Triple(Offset(screenW, screenH / 2f), false, false),
+            Triple(Offset(screenW / 2f, screenH), false, true),
+            Triple(Offset(0f, screenH / 2f), true, true)
+        )
+
+        handles.forEach { (posOffset, changesWidth, changesHeight) ->
+            Box(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(8.dp)
+                    .offset(
+                        x = with(density) { (posOffset.x - halfHandle).toDp() },
+                        y = with(density) { (posOffset.y - halfHandle).toDp() }
+                    )
+                    .size(with(density) { handleSize.toDp() })
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, StudioColors.CanvasSelection, CircleShape)
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            val dx = if (changesWidth) dragAmount.x / density else 0f
+                            val dy = if (changesHeight) dragAmount.y / density else 0f
+                            onResize(dx, dy, changesWidth, changesHeight)
+                        }
+                    }
             )
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Element renderer
+// Canvas Element Renderer
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun CanvasElementRenderer(
     element: GuiElement,
     selectedElementId: String?,
-    canvasWidth: Dp,
-    canvasHeight: Dp,
+    canvasSize: Size,
     onSelect: (String?) -> Unit = {},
-    onMoveElement: (String, Float, Float) -> Unit = { _, _, _ -> }
+    onMoveElement: (String, Float, Float) -> Unit = { _, _, _ -> },
+    parentWidth: Float = canvasSize.width,
+    parentHeight: Float = canvasSize.height
 ) {
     if (!element.visible) return
 
     val isSelected = element.id == selectedElementId
+    val density = LocalDensity.current
 
     val elemPos = element.prop("Position")?.value as? PropValue.UDim2Value
     val elemSize = element.prop("Size")?.value as? PropValue.UDim2Value
@@ -181,27 +289,24 @@ private fun CanvasElementRenderer(
     val pos = elemPos ?: PropValue.UDim2Value(0f, 0f, 0f, 0f)
     val size = elemSize ?: PropValue.UDim2Value(1f, 0f, 1f, 0f)
 
-    val elemX = calculateUDim(pos.xScale, pos.xOffset, canvasWidth)
-    val elemY = calculateUDim(pos.yScale, pos.yOffset, canvasHeight)
-    val elemWidth = calculateUDim(size.xScale, size.xOffset, canvasWidth)
-    val elemHeight = calculateUDim(size.yScale, size.yOffset, canvasHeight)
+    val px = with(density) { (parentWidth * pos.xScale + pos.xOffset.dp.toPx()).toDp() }
+    val py = with(density) { (parentHeight * pos.yScale + pos.yOffset.dp.toPx()).toDp() }
+    val pw = with(density) { (parentWidth * size.xScale + size.xOffset.dp.toPx()).coerceAtLeast(4f).toDp() }
+    val ph = with(density) { (parentHeight * size.yScale + size.yOffset.dp.toPx()).coerceAtLeast(4f).toDp() }
 
     Box(
         modifier = Modifier
-            .offset(x = elemX, y = elemY)
-            .size(elemWidth, elemHeight)
+            .offset(x = px, y = py)
+            .size(pw, ph)
             .then(getBoxStyle(element))
             .clickable { onSelect(element.id) }
-            // Drag to move (only for unlocked, non-root elements)
             .then(
                 if (!element.locked) {
                     Modifier.pointerInput(element.id) {
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                // Drag amount is in pixels; convert to dp for UDim2 offset
-                                val scaleFactor = this.density
-                                onMoveElement(element.id, dragAmount.x / scaleFactor, dragAmount.y / scaleFactor)
+                                onMoveElement(element.id, dragAmount.x / density, dragAmount.y / density)
                             }
                         )
                     }
@@ -213,17 +318,17 @@ private fun CanvasElementRenderer(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .border(1.dp, StudioColors.CanvasSelection)
+                    .border(1.5.dp, StudioColors.CanvasSelection.copy(alpha = 0.7f))
             )
         }
 
         // Empty container hint
-        if (element.children.isEmpty() && element.type.canHaveChildren) {
+        if (element.children.isEmpty() && element.type.canHaveChildren && element.type != ElementType.FRAME) {
             VanillaElementIcon(
                 type = element.type,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(24.dp)
+                    .size(16.dp)
             )
         }
 
@@ -237,10 +342,11 @@ private fun CanvasElementRenderer(
                         text = text.value,
                         color = textColor?.value ?: Color.White,
                         style = StudioTypography.MonoText,
-                        fontSize = 11.sp,
+                        fontSize = 9.sp,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .padding(4.dp)
+                            .padding(2.dp)
                     )
                 }
             }
@@ -251,77 +357,78 @@ private fun CanvasElementRenderer(
                     tint = StudioColors.TextTertiary,
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .size(24.dp)
+                        .size(16.dp)
                 )
             }
             else -> {}
         }
 
-        // Render children
+        // Render children recursively
         if (element.children.isNotEmpty() && element.expanded) {
             element.children.forEach { child ->
-                CanvasElementRenderer(
-                    element = child,
-                    selectedElementId = selectedElementId,
-                    canvasWidth = if (elemWidth > 0.dp) elemWidth else canvasWidth,
-                    canvasHeight = if (elemHeight > 0.dp) elemHeight else canvasHeight,
-                    onSelect = onSelect,
-                    onMoveElement = onMoveElement
-                )
+                // Only render children if this is a container type
+                if (element.type.canHaveChildren) {
+                    CanvasElementRenderer(
+                        element = child,
+                        selectedElementId = selectedElementId,
+                        canvasSize = canvasSize,
+                        onSelect = onSelect,
+                        onMoveElement = onMoveElement,
+                        parentWidth = pw.value,
+                        parentHeight = ph.value
+                    )
+                }
             }
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Style helpers
+// Box style from element properties
 // ─────────────────────────────────────────────────────────────────────────────
 
 private fun getBoxStyle(element: GuiElement): Modifier {
+    var mod = Modifier
+
     val bgColor = element.prop("BackgroundColor3")?.value as? PropValue.ColorValue
     val bgTrans = element.prop("BackgroundTransparency")?.value as? PropValue.FloatValue
-    val borderSize = element.prop("BorderSizePixel")?.value as? PropValue.IntValue
     val borderColor = element.prop("BorderColor3")?.value as? PropValue.ColorValue
+    val borderSize = element.prop("BorderSizePixel")?.value as? PropValue.IntValue
+    val visible = element.prop("Visible")?.value as? PropValue.BoolValue
 
-    var mod: Modifier = Modifier
-
-    // Default semi-transparent background so elements are always visible on canvas
-    val bg = bgColor?.value ?: Color(0xFF2D2D44)
-    val alpha = 1f - (bgTrans?.value ?: 0.2f)
-    mod = mod.background(bg.copy(alpha = alpha.coerceIn(0f, 1f)))
-
-    // Clip to bounds if ClipsDescendants is true
-    val clipsDescendants = element.prop("ClipsDescendants")?.value as? PropValue.BoolValue
-    if (clipsDescendants?.value == true) {
-        mod = mod.graphicsLayer { clip = true }
+    if (visible?.value == false) {
+        mod = mod.alpha(0.3f)
     }
 
-    if (borderSize != null && borderSize.value > 0 && borderColor != null) {
-        mod = mod.border(borderSize.value.dp, borderColor.value)
+    if (bgColor != null) {
+        val alpha = 1f - (bgTrans?.value ?: 0f)
+        mod = mod.background(bgColor.value.copy(alpha = alpha.coerceIn(0f, 1f)))
+    }
+
+    if (borderColor != null && (borderSize?.value ?: 0) > 0) {
+        mod = mod.border((borderSize!!.value).dp, borderColor.value)
     }
 
     return mod
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Grid drawing
+// Canvas Grid
 // ─────────────────────────────────────────────────────────────────────────────
 
 private fun DrawScope.drawCanvasGrid(canvasSize: Size, panX: Float, panY: Float, zoom: Float) {
-    val gridMinor = 20.dp.toPx() * zoom
-    val gridMajor = 100.dp.toPx() * zoom
-
-    if (gridMinor < 6f) return
+    val gridMinor = if (zoom >= 1.5f) 10f else if (zoom >= 0.8f) 20f else 40f
+    val gridMajor = gridMinor * 5
 
     val right = canvasSize.width
     val bottom = canvasSize.height
 
-    val gridOffsetX = panX % gridMinor
-    val gridOffsetY = panY % gridMinor
+    val gridOffsetX = (panX % gridMinor)
+    val gridOffsetY = (panY % gridMinor)
     val gridMajorOffsetX = panX % gridMajor
     val gridMajorOffsetY = panY % gridMajor
 
-    val strokeW = (0.5f * zoom.coerceAtLeast(1f)).coerceAtMost(2f)
+    val strokeW = 0.5f
 
     // Minor grid lines
     var x = gridOffsetX
@@ -336,7 +443,7 @@ private fun DrawScope.drawCanvasGrid(canvasSize: Size, panX: Float, panY: Float,
     }
 
     // Major grid lines
-    val majorStrokeW = (1.5f * zoom.coerceAtLeast(1f)).coerceAtMost(3f)
+    val majorStrokeW = 1f
     x = gridMajorOffsetX
     while (x <= right) {
         drawLine(StudioColors.CanvasGridMajor, Offset(x, 0f), Offset(x, bottom), majorStrokeW)
@@ -359,14 +466,6 @@ private fun DrawScope.drawCanvasGrid(canvasSize: Size, panX: Float, panY: Float,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// UDim2 calculation
-// ─────────────────────────────────────────────────────────────────────────────
-
-private fun calculateUDim(scale: Float, offset: Float, parentSize: Dp): Dp {
-    return (parentSize * scale) + offset.dp
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Hit-test with bounds checking
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -375,7 +474,7 @@ private fun hitTestElement(
     worldX: Float,
     worldY: Float,
     canvasSize: Size,
-    density: androidx.compose.ui.unit.Density
+    density: Float
 ): GuiElement? {
     if (!element.visible) return null
 
@@ -388,17 +487,19 @@ private fun hitTestElement(
     val parentW = canvasSize.width
     val parentH = canvasSize.height
 
-    val px = parentW * pos.xScale + with(density) { pos.xOffset.dp.toPx() }
-    val py = parentH * pos.yScale + with(density) { pos.yOffset.dp.toPx() }
-    val pw = (parentW * sz.xScale + with(density) { sz.xOffset.dp.toPx() }).coerceAtLeast(0f)
-    val ph = (parentH * sz.yScale + with(density) { sz.yOffset.dp.toPx() }).coerceAtLeast(0f)
+    val px = parentW * pos.xScale + pos.xOffset * density
+    val py = parentH * pos.yScale + pos.yOffset * density
+    val pw = (parentW * sz.xScale + sz.xOffset * density).coerceAtLeast(0f)
+    val ph = (parentH * sz.yScale + sz.yOffset * density).coerceAtLeast(0f)
 
+    // Check children first (reverse order for top-most)
     for (child in element.children.reversed()) {
         val childCanvasSize = Size(pw, ph)
         val hit = hitTestElement(child, worldX - px, worldY - py, childCanvasSize, density)
         if (hit != null) return hit
     }
 
+    // Check self
     if (worldX in px..(px + pw) && worldY in py..(py + ph)) {
         return element
     }
@@ -427,12 +528,5 @@ private fun CanvasInfoBadge(text: String) {
             fontSize = 9.sp,
             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
         )
-    }
-}
-
-@Composable
-private fun SmallIconButton(icon: ImageVector, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(28.dp)) {
-        Icon(icon, contentDescription = null, tint = StudioColors.TextTertiary, modifier = Modifier.size(16.dp))
     }
 }

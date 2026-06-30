@@ -39,6 +39,7 @@ fun DexExplorer(
     onDuplicate: (String) -> Unit,
     onRename: (String, String) -> Unit,
     onToggleVisibility: ((String, Boolean) -> Unit)? = null,
+    onAddElement: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.background(StudioColors.ExplorerBg)) {
@@ -60,6 +61,24 @@ fun DexExplorer(
                 color = StudioColors.TextTertiary,
                 fontSize = 8.sp
             )
+            if (onAddElement != null) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(StudioColors.Primary.copy(alpha = 0.2f))
+                        .clickable { onAddElement() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = "Add Instance",
+                        tint = StudioColors.Primary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
         }
 
         Divider(color = StudioColors.ToolbarDivider, thickness = 1.dp)

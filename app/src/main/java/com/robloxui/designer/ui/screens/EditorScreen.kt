@@ -83,11 +83,14 @@ fun EditorScreen(viewModel: EditorViewModel) {
                     CanvasView(
                         rootElement = state.rootElement,
                         selectedElementId = state.selectedElementId,
+                        selectedElement = viewModel.selectedElement,
                         zoom = state.zoom,
                         panX = state.panOffsetX,
                         panY = state.panOffsetY,
                         onSelect = { viewModel.selectElement(it) },
                         onMoveElement = { id, dx, dy -> viewModel.moveElementByDelta(id, dx, dy) },
+                        onResizeElement = null,
+                        onResizeElement = { id, dx, dy, changeW, changeH -> viewModel.resizeElement(id, dx, dy, changeW, changeH) },
                         onZoomChange = { viewModel.setZoom(it) },
                         onPanChange = { x, y -> viewModel.setPan(x, y) },
                         modifier = Modifier.fillMaxSize().weight(1f)
@@ -130,7 +133,8 @@ fun EditorScreen(viewModel: EditorViewModel) {
                                 onDelete = { viewModel.deleteElement(it) },
                                 onDuplicate = { viewModel.duplicateElement(it) },
                                 onRename = { id, name -> viewModel.renameElement(id, name) },
-                            onToggleVisibility = { id, visible -> viewModel.setVisibility(id, visible) }
+                            onToggleVisibility = { id, visible -> viewModel.setVisibility(id, visible) },
+                                onAddElement = { viewModel.addElement(com.robloxui.designer.model.ElementType.FRAME) },
                             )
                         }
                         EditorPanel.PROPERTIES -> {
@@ -302,7 +306,8 @@ private fun BottomEditorPanel(
                     onDelete = { viewModel.deleteElement(it) },
                     onDuplicate = { viewModel.duplicateElement(it) },
                     onRename = { id, name -> viewModel.renameElement(id, name) },
-                            onToggleVisibility = { id, visible -> viewModel.setVisibility(id, visible) }
+                            onToggleVisibility = { id, visible -> viewModel.setVisibility(id, visible) },
+                                onAddElement = { viewModel.addElement(com.robloxui.designer.model.ElementType.FRAME) },
                 )
             }
             EditorPanel.PROPERTIES -> {
@@ -434,11 +439,14 @@ private fun PreviewMode(viewModel: EditorViewModel) {
                 CanvasView(
                     rootElement = state.rootElement,
                     selectedElementId = selectedElementId,
+                        selectedElement = null,
                     zoom = state.zoom,
                     panX = state.panOffsetX,
                     panY = state.panOffsetY,
                     onSelect = { selectedElementId = it },
                     onMoveElement = { id, dx, dy -> viewModel.moveElementByDelta(id, dx, dy) },
+                        onResizeElement = null,
+                        onResizeElement = { id, dx, dy, changeW, changeH -> viewModel.resizeElement(id, dx, dy, changeW, changeH) },
                     onZoomChange = { viewModel.setZoom(it) },
                     onPanChange = { x, y -> viewModel.setPan(x, y) },
                     modifier = Modifier.fillMaxSize().padding(6.dp)
